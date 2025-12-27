@@ -4,6 +4,14 @@
 
 Plane Manager provides a visual, layered model of infrastructure that compiles into reviewable execution plans. The system keeps domain concepts provider-neutral while allowing adapters to map into specific platforms.
 
+## Structure
+
+- `apps/web` - React + Vite UI with React Flow canvas.
+- `services/api` - Fastify API, session auth, plan diff engine, Postgres storage.
+- `packages/domain` - Shared types and schemas.
+- `docs` - Architecture, ADRs, and roadmap.
+- `deploy/helm/planemgr` - Helm chart scaffolding.
+
 ## Components
 
 - Web UI (`apps/web`): React + React Flow canvas with planes, nodes, edges, plan preview, and drift controls.
