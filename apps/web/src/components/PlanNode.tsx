@@ -20,7 +20,7 @@ export const PlanNode = ({ data }: NodeProps<PlanNodeData>) => (
       </span>
     </div>
     <div className="plan-node__label">{data.label}</div>
-    <Handle type="target" position={Position.Left} />
-    <Handle type="source" position={Position.Right} />
+    <Handle className="nodrag nopan" type="target" position={Position.Left} />
+    <Handle className="nodrag nopan" type="source" position={Position.Right} />
   </div>
 );

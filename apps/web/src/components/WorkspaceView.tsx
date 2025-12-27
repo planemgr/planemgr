@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 import ReactFlow, {
   addEdge,
   Background,
@@ -6,9 +13,11 @@ import ReactFlow, {
   MiniMap,
   useEdgesState,
   useNodesState,
+  type ReactFlowInstance,
   type Connection,
   type Edge,
   type Node,
+  type XYPosition,
 } from "reactflow";
 import type {
   DriftState,
@@ -122,6 +131,9 @@ export const WorkspaceView = ({
     undefined,
   );
 
+  const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+
   const [nodes, setNodes, onNodesChange] = useNodesState<PlanNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -211,28 +223,82 @@ export const WorkspaceView = ({
     setDirty(true);
   };
 
-  const handleAddNode = (kind: NodeKind) => {
-    const layerId = activeLayerId ?? layers[0]?.id;
-    if (!layerId) {
-      return;
-    }
-    const layer = layers.find((item) => item.id === layerId);
-    const newNode: Node<PlanNodeData> = {
-      id: createId("node"),
-      type: "planNode",
-      position: { x: 180 + Math.random() * 220, y: 120 + Math.random() * 200 },
-      data: {
-        label: `${kind[0].toUpperCase()}${kind.slice(1)}`,
-        kind,
-        layerId,
-        layerColor: layer?.color ?? "#ffffff",
-        driftStatus: "unknown",
-        config: { provider: "generic" },
-      },
-    };
-    setNodes((current) => [...current, newNode]);
-    setDirty(true);
-  };
+  const handleAddNode = useCallback(
+    (kind: NodeKind, position?: XYPosition) => {
+      const layerId = activeLayerId ?? layers[0]?.id;
+      if (!layerId) {
+        return;
+      }
+      const layer = layers.find((item) => item.id === layerId);
+      const newNode: Node<PlanNodeData> = {
+        id: createId("node"),
+        type: "planNode",
+        position:
+          position ?? {
+            x: 180 + Math.random() * 220,
+            y: 120 + Math.random() * 200,
+          },
+        data: {
+          label: `${kind[0].toUpperCase()}${kind.slice(1)}`,
+          kind,
+          layerId,
+          layerColor: layer?.color ?? "#ffffff",
+          driftStatus: "unknown",
+          config: { provider: "generic" },
+        },
+      };
+      setNodes((current) => [...current, newNode]);
+      setDirty(true);
+    },
+    [activeLayerId, layers, setNodes],
+  );
+
+  const handleDragStart = useCallback(
+    (event: DragEvent<HTMLButtonElement>, kind: NodeKind) => {
+      event.dataTransfer.setData("application/planemgr-node", kind);
+      event.dataTransfer.effectAllowed = "move";
+    },
+    [],
+  );
+
+  const handleDragOver = useCallback((event: DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+
+      const kind = event.dataTransfer.getData("application/planemgr-node");
+      if (!kind || !nodePalette.some((item) => item.kind === kind)) {
+        return;
+      }
+
+      const instance = reactFlowInstance.current;
+      if (!instance) {
+        return;
+      }
+
+      const screenPosition = { x: event.clientX, y: event.clientY };
+      let position: XYPosition;
+
+      if ("screenToFlowPosition" in instance) {
+        position = instance.screenToFlowPosition(screenPosition);
+      } else if (reactFlowWrapper.current) {
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        position = instance.project({
+          x: screenPosition.x - bounds.left,
+          y: screenPosition.y - bounds.top,
+        });
+      } else {
+        position = instance.project(screenPosition);
+      }
+
+      handleAddNode(kind as NodeKind, position);
+    },
+    [handleAddNode],
+  );
 
   const handleSaveWorkspace = async () => {
     try {
@@ -340,7 +406,9 @@ export const WorkspaceView = ({
                 <button
                   key={item.kind}
                   className="palette__item"
+                  draggable
                   onClick={() => handleAddNode(item.kind)}
+                  onDragStart={(event) => handleDragStart(event, item.kind)}
                 >
                   <div>
                     <div className="palette__label">{item.label}</div>
@@ -394,7 +462,12 @@ export const WorkspaceView = ({
           </section>
         </aside>
 
-        <main className="workspace__canvas">
+        <main
+          className="workspace__canvas"
+          ref={reactFlowWrapper}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+        >
           <div className="canvas__overlay">
             <span>Visual Infrastructure Plane</span>
           </div>
@@ -405,6 +478,9 @@ export const WorkspaceView = ({
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
             nodeTypes={nodeTypes}
+            onInit={(instance) => {
+              reactFlowInstance.current = instance;
+            }}
             proOptions={{ hideAttribution: true }}
             fitView
           >
