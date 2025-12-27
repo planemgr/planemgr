@@ -1,0 +1,10 @@
+node_modules
+.DS_Store
+.env
+.env.local
+.env.*.local
+pnpm-lock.yaml
+.pnpm-store
+/dist
+/apps/web/dist
+/services/api/dist

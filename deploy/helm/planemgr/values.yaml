@@ -1,0 +1,31 @@
+api:
+  replicaCount: 1
+  image:
+    repository: planemgr-api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 4000
+  env:
+    APP_USERNAME: admin
+    APP_PASSWORD: change-me
+    SESSION_SECRET: change-me
+    DATABASE_URL: postgres://planemgr:planemgr@postgres:5432/planemgr
+  resources: {}
+
+web:
+  replicaCount: 1
+  image:
+    repository: planemgr-web
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources: {}
+
+ingress:
+  enabled: false
+  className: ""
+  hosts: []

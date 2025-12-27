@@ -1,0 +1,17 @@
+{
+  "name": "planemgr",
+  "private": true,
+  "packageManager": "pnpm@10.26.2",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm -r build",
+    "migrate": "pnpm -C services/api migrate",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format"
+  }
+}

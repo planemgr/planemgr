@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "planemgr.fullname" . }}-web
+  labels:
+    app.kubernetes.io/name: {{ include "planemgr.name" . }}
+    app.kubernetes.io/component: web
+spec:
+  type: {{ .Values.web.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "planemgr.name" . }}
+    app.kubernetes.io/component: web
+  ports:
+    - port: {{ .Values.web.service.port }}
+      targetPort: {{ .Values.web.service.port }}
+      protocol: TCP
+      name: http
