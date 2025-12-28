@@ -57,6 +57,7 @@ export const ensureIacEnvironment = async (iacDir: string) => {
   // Storage uses OpenTofu configs on disk, so validate tools and repo up front.
   ensureCommand("git", ["--version"], "git");
   ensureCommand("tofu", ["version"], "tofu");
+  ensureCommand("ssh", ["-V"], "ssh");
 
   await fs.mkdir(path.resolve(iacDir), { recursive: true });
   await ensureGitRepository(iacDir);

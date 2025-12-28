@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { createPool } from "./db";
 import { buildServer } from "./server";
 import { createStorage } from "./storage";
 import { ensureIacEnvironment } from "./services/iac";
@@ -6,7 +7,8 @@ import { ensureIacEnvironment } from "./services/iac";
 const start = async () => {
   await ensureIacEnvironment(config.iacDir);
   const storage = createStorage({ iacDir: config.iacDir });
-  const app = buildServer(storage);
+  const db = createPool(config.databaseUrl);
+  const app = buildServer(storage, db);
 
   try {
     await app.listen({

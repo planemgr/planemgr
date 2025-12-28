@@ -847,6 +847,17 @@ export declare const sessionUserSchema: z.ZodObject<{
     username: string;
 }>;
 export type SessionUser = z.infer<typeof sessionUserSchema>;
+export declare const userProfileSchema: z.ZodObject<{
+    username: z.ZodString;
+    sshPublicKey: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    username: string;
+    sshPublicKey: string;
+}, {
+    username: string;
+    sshPublicKey: string;
+}>;
+export type UserProfile = z.infer<typeof userProfileSchema>;
 export declare const loginInputSchema: z.ZodObject<{
     username: z.ZodString;
     password: z.ZodString;

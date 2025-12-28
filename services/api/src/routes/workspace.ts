@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import {
   driftUpdateSchema,
   versionCreateSchema,
@@ -6,15 +6,7 @@ import {
 } from "@planemgr/domain";
 import { parseBody } from "../utils/validation";
 import { createPlan } from "../services/plan";
-
-const requireAuth = (request: FastifyRequest, reply: FastifyReply) => {
-  const user = request.session.get("user");
-  if (!user) {
-    reply.code(401).send({ error: "unauthorized" });
-    return false;
-  }
-  return true;
-};
+import { requireAuth } from "../utils/auth";
 
 export const registerWorkspaceRoutes = async (app: FastifyInstance) => {
   app.get("/api/health", async () => ({ status: "ok" }));

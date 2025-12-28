@@ -27,3 +27,4 @@ API: `http://localhost:4000`
 - Node positions are treated as layout metadata and do not affect the execution plan.
 - Platform nodes act as resizable containers; child nodes record their platform via `config.platformId`.
 - The plan engine currently diffs graph state; provider adapters will expand it into IaC tool plans.
+- SSH keypairs are generated on demand for the logged-in user and stored in Postgres; the public key is shown in the profile menu and the private key is reserved for provisioning.

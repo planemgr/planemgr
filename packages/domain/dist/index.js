@@ -93,6 +93,10 @@ export const planVersionSchema = z.object({
 export const sessionUserSchema = z.object({
     username: z.string().min(1)
 });
+export const userProfileSchema = z.object({
+    username: z.string().min(1),
+    sshPublicKey: z.string().min(1)
+});
 export const loginInputSchema = z.object({
     username: z.string().min(1),
     password: z.string().min(1)

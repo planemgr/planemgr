@@ -25,6 +25,7 @@ import type {
   Layer,
   NodeKind,
   PlanVersion,
+  UserProfile,
   Workspace,
 } from "@planemgr/domain";
 import { api } from "../api";
@@ -230,6 +231,10 @@ export const WorkspaceView = ({
   username: string;
   onLogout: () => void;
 }) => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [drift, setDrift] = useState<DriftState>({});
   const [versions, setVersions] = useState<PlanVersion[]>([]);
@@ -247,6 +252,7 @@ export const WorkspaceView = ({
     undefined,
   );
 
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const activeLayerRef = useRef<string | undefined>(undefined);
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
@@ -262,6 +268,43 @@ export const WorkspaceView = ({
   useEffect(() => {
     activeLayerRef.current = activeLayerId;
   }, [activeLayerId]);
+
+  useEffect(() => {
+    let isActive = true;
+    api
+      .getProfile()
+      .then((data) => {
+        if (isActive) {
+          setProfile(data);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        if (isActive) {
+          setProfileError("Unable to load profile key.");
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!profileOpen) {
+      return;
+    }
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && profileMenuRef.current?.contains(target)) {
+        return;
+      }
+      setProfileOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [profileOpen]);
 
   const activeVersion = useMemo(
     () => versions.find((version) => version.id === baseVersionId),
@@ -702,6 +745,24 @@ export const WorkspaceView = ({
   };
 
   const handleResetStatus = () => setStatus(null);
+  const handleCopyPublicKey = async () => {
+    if (!profile?.sshPublicKey) {
+      return;
+    }
+    if (!navigator.clipboard) {
+      setProfileStatus("Clipboard unavailable.");
+      window.setTimeout(() => setProfileStatus(null), 2000);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(profile.sshPublicKey);
+      setProfileStatus("Public key copied.");
+    } catch (error) {
+      console.error(error);
+      setProfileStatus("Unable to copy key.");
+    }
+    window.setTimeout(() => setProfileStatus(null), 2000);
+  };
 
   return (
     <div className="workspace">
@@ -713,7 +774,42 @@ export const WorkspaceView = ({
           </div>
         </div>
         <div className="workspace__header-actions">
-          <div className="workspace__user">{username}</div>
+          <div className="profile-menu" ref={profileMenuRef}>
+            <button
+              type="button"
+              className="profile-menu__trigger"
+              onClick={() => setProfileOpen((current) => !current)}
+            >
+              <span>{username}</span>
+              <span className="profile-menu__chevron">▾</span>
+            </button>
+            {profileOpen ? (
+              <div className="profile-menu__panel">
+                <div className="profile-menu__title">Profile</div>
+                <div className="profile-menu__label">SSH public key</div>
+                {profileError ? (
+                  <div className="muted">{profileError}</div>
+                ) : profile ? (
+                  <div className="profile-menu__key">{profile.sshPublicKey}</div>
+                ) : (
+                  <div className="muted">Generating key...</div>
+                )}
+                <div className="profile-menu__actions">
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={handleCopyPublicKey}
+                    disabled={!profile?.sshPublicKey}
+                  >
+                    Copy key
+                  </button>
+                </div>
+                {profileStatus ? (
+                  <div className="profile-menu__status">{profileStatus}</div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <button className="ghost" onClick={onLogout}>
             Sign out
           </button>

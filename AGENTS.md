@@ -25,6 +25,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 - Plan version: immutable snapshot stored as a git commit.
 - Plan: diff between current workspace and a chosen git version.
 - Platform node: resizable container for PaaS/bare-metal foundations; child nodes store `config.platformId`.
+- User profile: SSH keypair stored in Postgres; UI exposes only the public key while provisioning uses both keys.
 
 ## Plan pipeline
 

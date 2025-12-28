@@ -4,7 +4,7 @@ ARG TOFU_VERSION=1.7.3
 ARG TARGETARCH
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates curl git unzip \
+  && apt-get install -y --no-install-recommends ca-certificates curl git openssh-client unzip \
   && rm -rf /var/lib/apt/lists/*
 
 RUN arch="${TARGETARCH:-amd64}" \

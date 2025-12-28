@@ -3,6 +3,7 @@ import type {
   Plan,
   PlanVersion,
   SessionUser,
+  UserProfile,
   Workspace,
   WorkspaceUpdateInput
 } from "@planemgr/domain";
@@ -36,6 +37,7 @@ export const api = {
       body: JSON.stringify({ username, password })
     }),
   logout: () => request<{ ok: boolean }>("/api/session", { method: "DELETE" }),
+  getProfile: () => request<UserProfile>("/api/profile"),
   getWorkspace: () => request<Workspace>("/api/workspace"),
   updateWorkspace: (payload: WorkspaceUpdateInput) =>
     request<Workspace>("/api/workspace", { method: "PUT", body: JSON.stringify(payload) }),

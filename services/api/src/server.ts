@@ -4,10 +4,12 @@ import secureSession from "@fastify/secure-session";
 import crypto from "crypto";
 import { config } from "./config";
 import type { Storage } from "./storage";
+import type { Pool } from "pg";
 import { registerAuthRoutes } from "./routes/auth";
+import { registerProfileRoutes } from "./routes/profile";
 import { registerWorkspaceRoutes } from "./routes/workspace";
 
-export const buildServer = (storage: Storage) => {
+export const buildServer = (storage: Storage, db: Pool) => {
   const app = Fastify({
     logger: config.isProduction
       ? true
@@ -23,6 +25,10 @@ export const buildServer = (storage: Storage) => {
   });
 
   app.decorate("storage", storage);
+  app.decorate("db", db);
+  app.addHook("onClose", async () => {
+    await db.end();
+  });
 
   app.register(cors, {
     origin: config.corsOrigins,
@@ -42,6 +48,7 @@ export const buildServer = (storage: Storage) => {
   });
 
   app.register(registerAuthRoutes);
+  app.register(registerProfileRoutes);
   app.register(registerWorkspaceRoutes);
 
   return app;

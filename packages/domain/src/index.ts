@@ -130,6 +130,12 @@ export const sessionUserSchema = z.object({
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
+export const userProfileSchema = z.object({
+  username: z.string().min(1),
+  sshPublicKey: z.string().min(1)
+});
+export type UserProfile = z.infer<typeof userProfileSchema>;
+
 export const loginInputSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1)
