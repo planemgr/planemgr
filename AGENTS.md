@@ -24,6 +24,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 - Workspace: active graph state, layers, drift map stored in OpenTofu JSON + metadata.
 - Plan version: immutable snapshot stored as a git commit.
 - Plan: diff between current workspace and a chosen git version.
+- Platform node: resizable container for PaaS/bare-metal foundations; child nodes store `config.platformId`.
 
 ## Plan pipeline
 

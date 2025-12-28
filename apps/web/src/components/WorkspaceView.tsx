@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type DragEvent,
 } from "react";
 import ReactFlow, {
@@ -23,7 +24,6 @@ import type {
   DriftState,
   Layer,
   NodeKind,
-  Plan,
   PlanVersion,
   Workspace,
 } from "@planemgr/domain";
@@ -32,39 +32,106 @@ import {
   flowToGraph,
   graphToFlowEdges,
   graphToFlowNodes,
+  DEFAULT_PLATFORM_SIZE,
   type PlanNodeData,
 } from "../graph";
 import { PlanNode } from "./PlanNode";
+import { PlatformNode } from "./PlatformNode";
 import "reactflow/dist/style.css";
 
 const LOCAL_DRAFT_ID = "draft-local";
 const DRAFT_COMMIT_NAME = "Draft: workspace";
 
-const nodePalette: { kind: NodeKind; label: string; description: string }[] = [
-  {
-    kind: "compute",
+const nodePaletteByKind: Record<
+  NodeKind,
+  { label: string; description: string }
+> = {
+  platform: {
+    label: "Platform",
+    description: "PaaS, cluster, or bare metal foundation.",
+  },
+  compute: {
     label: "Compute",
     description: "Bare metal or VM capacity.",
   },
-  {
-    kind: "service",
+  service: {
     label: "Service",
     description: "Applications and workloads.",
   },
-  {
-    kind: "network",
+  network: {
     label: "Network",
     description: "Routes, gateways, links.",
   },
-  { kind: "storage", label: "Storage", description: "Stateful data systems." },
-  {
-    kind: "control",
+  storage: {
+    label: "Storage",
+    description: "Stateful data systems.",
+  },
+  control: {
     label: "Control",
     description: "Schedulers and control loops.",
   },
-  { kind: "data", label: "Data", description: "Streams and data flows." },
-  { kind: "security", label: "Security", description: "Secrets and policy." },
+  data: {
+    label: "Data",
+    description: "Streams and data flows.",
+  },
+  security: {
+    label: "Security",
+    description: "Secrets and policy.",
+  },
+};
+
+const paletteByLayer: Record<string, NodeKind[]> = {
+  physical: ["platform", "compute", "network", "storage", "security"],
+  infra: ["platform", "compute", "network", "storage", "security"],
+  control: ["control", "network", "security"],
+  service: ["service", "data", "storage"],
+};
+
+const allPaletteKinds = Object.keys(nodePaletteByKind) as NodeKind[];
+
+const resolvePaletteKinds = (layerId?: string) =>
+  paletteByLayer[layerId ?? ""] ?? allPaletteKinds;
+
+const layerPresets = [
+  {
+    id: "physical",
+    name: "Physical",
+    color: "#f2c879",
+    order: 1,
+  },
+  {
+    id: "infra",
+    name: "Infrastructure",
+    color: "#ffb454",
+    order: 2,
+  },
+  {
+    id: "control",
+    name: "Control",
+    color: "#7cc4ff",
+    order: 3,
+  },
+  {
+    id: "service",
+    name: "Services",
+    color: "#f37cc1",
+    order: 4,
+  },
 ];
+
+const normalizeLayers = (layers: Layer[]): Layer[] => {
+  const byId = new Map(layers.map((layer) => [layer.id, layer]));
+  return layerPresets.map((preset) => {
+    const existing = byId.get(preset.id);
+    return {
+      id: preset.id,
+      name: preset.name,
+      color: existing?.color ?? preset.color,
+      visible: existing?.visible ?? true,
+      order: preset.order,
+    };
+  });
+};
 
 const createId = (prefix: string) => {
   if ("randomUUID" in crypto) {
@@ -73,17 +140,73 @@ const createId = (prefix: string) => {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
+const isPlatformNode = (node: Node<PlanNodeData>) => node.data.kind === "platform";
+
+const parseNumericStyle = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const resolvePlatformSize = (node: Node<PlanNodeData>) => {
+  const width = parseNumericStyle(node.width ?? node.style?.width) ?? DEFAULT_PLATFORM_SIZE.width;
+  const height =
+    parseNumericStyle(node.height ?? node.style?.height) ?? DEFAULT_PLATFORM_SIZE.height;
+  return { width, height };
+};
+
+const resolveAbsolutePosition = (node: Node<PlanNodeData>, nodes: Node<PlanNodeData>[]) => {
+  if (node.parentNode) {
+    const parent = nodes.find((candidate) => candidate.id === node.parentNode);
+    if (parent) {
+      const parentPosition = parent.position;
+      return {
+        x: parentPosition.x + node.position.x,
+        y: parentPosition.y + node.position.y,
+      };
+    }
+  }
+  return node.position;
+};
+
+// Map a drop position to a platform container so UI grouping matches persisted platform membership.
+const findPlatformAtPosition = (
+  position: XYPosition,
+  nodes: Node<PlanNodeData>[],
+) => {
+  const platforms = nodes.filter(isPlatformNode);
+  const matches = platforms.filter((platform) => {
+    const platformPosition = resolveAbsolutePosition(platform, nodes);
+    const { width, height } = resolvePlatformSize(platform);
+    return (
+      position.x >= platformPosition.x &&
+      position.x <= platformPosition.x + width &&
+      position.y >= platformPosition.y &&
+      position.y <= platformPosition.y + height
+    );
+  });
+  return matches.length > 0 ? matches[matches.length - 1] : undefined;
+};
+
 const mapVisibility = (layers: Layer[]) =>
   new Map(layers.map((layer) => [layer.id, layer.visible]));
 
 const applyLayerVisibility = (
   nodes: Node<PlanNodeData>[],
   layers: Layer[],
+  activeLayerId?: string,
 ): Node<PlanNodeData>[] => {
   const visibility = mapVisibility(layers);
   return nodes.map((node) => ({
     ...node,
-    hidden: !(visibility.get(node.data.layerId) ?? true),
+    hidden: activeLayerId
+      ? node.data.layerId !== activeLayerId
+      : !(visibility.get(node.data.layerId) ?? true),
   }));
 };
 
@@ -100,18 +223,6 @@ const applyEdgeVisibility = (
   }));
 };
 
-const applyDriftStatus = (
-  nodes: Node<PlanNodeData>[],
-  drift: DriftState,
-): Node<PlanNodeData>[] =>
-  nodes.map((node) => ({
-    ...node,
-    data: {
-      ...node.data,
-      driftStatus: drift[node.id]?.status ?? "unknown",
-    },
-  }));
-
 export const WorkspaceView = ({
   username,
   onLogout,
@@ -122,8 +233,8 @@ export const WorkspaceView = ({
   const [layers, setLayers] = useState<Layer[]>([]);
   const [drift, setDrift] = useState<DriftState>({});
   const [versions, setVersions] = useState<PlanVersion[]>([]);
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isSwitchingVersion, setIsSwitchingVersion] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [versionName, setVersionName] = useState("");
@@ -136,17 +247,38 @@ export const WorkspaceView = ({
     undefined,
   );
 
+  const activeLayerRef = useRef<string | undefined>(undefined);
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<PlanNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const nodeTypes = useMemo(() => ({ planNode: PlanNode }), []);
+  const nodeTypes = useMemo(
+    () => ({ planNode: PlanNode, platformNode: PlatformNode }),
+    [],
+  );
+
+  useEffect(() => {
+    activeLayerRef.current = activeLayerId;
+  }, [activeLayerId]);
 
   const activeVersion = useMemo(
     () => versions.find((version) => version.id === baseVersionId),
     [versions, baseVersionId],
+  );
+
+  const paletteKinds = useMemo(
+    () => resolvePaletteKinds(activeLayerId),
+    [activeLayerId],
+  );
+  const paletteItems = useMemo(
+    () =>
+      paletteKinds.map((kind) => ({
+        kind,
+        ...nodePaletteByKind[kind],
+      })),
+    [paletteKinds],
   );
 
   const isActiveDraft =
@@ -154,26 +286,40 @@ export const WorkspaceView = ({
     baseVersionId === LOCAL_DRAFT_ID ||
     activeVersion?.name === DRAFT_COMMIT_NAME;
   const isReadOnly = !isActiveDraft;
+  const isBusy = isBootstrapping || isSwitchingVersion;
+  const isEditingLocked = isReadOnly || isBusy;
+  const overlayLabel = isBusy
+    ? isSwitchingVersion
+      ? "Loading version..."
+      : "Loading workspace..."
+    : null;
 
   const applyWorkspace = useCallback(
     (workspace: Workspace) => {
-      setLayers(workspace.layers);
+      const normalizedLayers = normalizeLayers(workspace.layers);
+      const nextActiveLayerId =
+        activeLayerRef.current &&
+        normalizedLayers.some((layer) => layer.id === activeLayerRef.current)
+          ? activeLayerRef.current
+          : normalizedLayers[0]?.id;
+      setLayers(normalizedLayers);
       setDrift(workspace.drift);
-      setActiveLayerId((current) =>
-        current && workspace.layers.some((layer) => layer.id === current)
-          ? current
-          : workspace.layers[0]?.id,
-      );
+      setActiveLayerId(nextActiveLayerId);
       const flowNodes = graphToFlowNodes(
         workspace.graph,
-        workspace.layers,
+        normalizedLayers,
         workspace.drift,
+      );
+      const visibleNodes = applyLayerVisibility(
+        flowNodes,
+        normalizedLayers,
+        nextActiveLayerId,
       );
       const flowEdges = applyEdgeVisibility(
         graphToFlowEdges(workspace.graph),
-        flowNodes,
+        visibleNodes,
       );
-      setNodes(flowNodes);
+      setNodes(visibleNodes);
       setEdges(flowEdges);
       setDirty(false);
     },
@@ -181,10 +327,13 @@ export const WorkspaceView = ({
   );
 
   const loadWorkspace = useCallback(async () => {
-    setLoading(true);
-    const workspace = await api.getWorkspace();
-    applyWorkspace(workspace);
-    setLoading(false);
+    setIsBootstrapping(true);
+    try {
+      const workspace = await api.getWorkspace();
+      applyWorkspace(workspace);
+    } finally {
+      setIsBootstrapping(false);
+    }
   }, [applyWorkspace]);
 
   const loadVersions = useCallback(
@@ -259,13 +408,13 @@ export const WorkspaceView = ({
     Promise.all([loadWorkspace(), loadVersions()]).catch((error) => {
       console.error(error);
       setStatus("Failed to load workspace.");
-      setLoading(false);
+      setIsBootstrapping(false);
     });
   }, [loadWorkspace, loadVersions]);
 
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
-      if (isReadOnly) {
+      if (isEditingLocked) {
         return;
       }
       onNodesChange(changes);
@@ -273,12 +422,12 @@ export const WorkspaceView = ({
         setDirty(true);
       }
     },
-    [onNodesChange, isReadOnly],
+    [onNodesChange, isEditingLocked],
   );
 
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
-      if (isReadOnly) {
+      if (isEditingLocked) {
         return;
       }
       onEdgesChange(changes);
@@ -286,7 +435,7 @@ export const WorkspaceView = ({
         setDirty(true);
       }
     },
-    [onEdgesChange, isReadOnly],
+    [onEdgesChange, isEditingLocked],
   );
 
   const handleConnect = useCallback(
@@ -294,8 +443,10 @@ export const WorkspaceView = ({
       if (!connection.source || !connection.target) {
         return;
       }
-      if (isReadOnly) {
-        setStatus("Check out the draft to edit.");
+      if (isEditingLocked) {
+        if (isReadOnly) {
+          setStatus("Check out the draft to edit.");
+        }
         return;
       }
       const edge: Edge = {
@@ -308,28 +459,30 @@ export const WorkspaceView = ({
       setEdges((current) => addEdge(edge, current));
       setDirty(true);
     },
-    [setEdges, isReadOnly],
+    [setEdges, isEditingLocked, isReadOnly],
   );
 
-  const handleToggleLayer = (layerId: string) => {
-    if (isReadOnly) {
-      setStatus("Check out the draft to edit.");
-      return;
-    }
-    const updated = layers.map((layer) =>
-      layer.id === layerId ? { ...layer, visible: !layer.visible } : layer,
-    );
-    setLayers(updated);
-    const updatedNodes = applyLayerVisibility(nodes, updated);
-    setNodes(updatedNodes);
-    setEdges((current) => applyEdgeVisibility(current, updatedNodes));
-    setDirty(true);
-  };
+  const handleSelectLayer = useCallback(
+    (layerId: string) => {
+      if (layerId === activeLayerId) {
+        return;
+      }
+      setActiveLayerId(layerId);
+      setNodes((current) => {
+        const updatedNodes = applyLayerVisibility(current, layers, layerId);
+        setEdges((currentEdges) => applyEdgeVisibility(currentEdges, updatedNodes));
+        return updatedNodes;
+      });
+    },
+    [activeLayerId, layers, setEdges, setNodes],
+  );
 
   const handleAddNode = useCallback(
     (kind: NodeKind, position?: XYPosition) => {
-      if (isReadOnly) {
-        setStatus("Check out the draft to edit.");
+      if (isEditingLocked) {
+        if (isReadOnly) {
+          setStatus("Check out the draft to edit.");
+        }
         return;
       }
       const layerId = activeLayerId ?? layers[0]?.id;
@@ -337,38 +490,66 @@ export const WorkspaceView = ({
         return;
       }
       const layer = layers.find((item) => item.id === layerId);
+      const basePosition =
+        position ?? {
+          x: 180 + Math.random() * 220,
+          y: 120 + Math.random() * 200,
+        };
+      const targetPlatform =
+        kind !== "platform" && position
+          ? findPlatformAtPosition(basePosition, nodes)
+          : undefined;
+      const platformPosition = targetPlatform
+        ? resolveAbsolutePosition(targetPlatform, nodes)
+        : null;
+      const resolvedPosition = platformPosition
+        ? {
+            x: basePosition.x - platformPosition.x,
+            y: basePosition.y - platformPosition.y,
+          }
+        : basePosition;
+      const config =
+        kind === "platform"
+          ? { platform: "generic" }
+          : { provider: "generic" };
       const newNode: Node<PlanNodeData> = {
         id: createId("node"),
-        type: "planNode",
-        position:
-          position ?? {
-            x: 180 + Math.random() * 220,
-            y: 120 + Math.random() * 200,
-          },
+        type: kind === "platform" ? "platformNode" : "planNode",
+        position: resolvedPosition,
+        parentNode: targetPlatform?.id,
+        extent: targetPlatform ? "parent" : undefined,
+        zIndex: kind === "platform" ? 0 : 1,
+        style:
+          kind === "platform"
+            ? {
+                width: DEFAULT_PLATFORM_SIZE.width,
+                height: DEFAULT_PLATFORM_SIZE.height,
+              }
+            : undefined,
         data: {
-          label: `${kind[0].toUpperCase()}${kind.slice(1)}`,
+          label: kind === "platform" ? "Platform" : `${kind[0].toUpperCase()}${kind.slice(1)}`,
           kind,
           layerId,
           layerColor: layer?.color ?? "#ffffff",
           driftStatus: "unknown",
-          config: { provider: "generic" },
+          config,
         },
       };
       setNodes((current) => [...current, newNode]);
       setDirty(true);
     },
-    [activeLayerId, layers, setNodes, isReadOnly],
+    [activeLayerId, layers, nodes, setNodes, isEditingLocked, isReadOnly],
   );
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLButtonElement>, kind: NodeKind) => {
-      if (isReadOnly) {
+      if (isEditingLocked) {
         return;
       }
       event.dataTransfer.setData("application/planemgr-node", kind);
       event.dataTransfer.effectAllowed = "move";
     },
-    [isReadOnly],
+    [isEditingLocked],
   );
 
   const handleDragOver = useCallback((event: DragEvent) => {
@@ -379,13 +560,15 @@ export const WorkspaceView = ({
   const handleDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault();
-      if (isReadOnly) {
-        setStatus("Check out the draft to edit.");
+      if (isEditingLocked) {
+        if (isReadOnly) {
+          setStatus("Check out the draft to edit.");
+        }
         return;
       }
 
       const kind = event.dataTransfer.getData("application/planemgr-node");
-      if (!kind || !nodePalette.some((item) => item.kind === kind)) {
+      if (!kind || !paletteKinds.includes(kind as NodeKind)) {
         return;
       }
 
@@ -411,33 +594,66 @@ export const WorkspaceView = ({
 
       handleAddNode(kind as NodeKind, position);
     },
-    [handleAddNode, isReadOnly],
+    [handleAddNode, isEditingLocked, isReadOnly, paletteKinds],
   );
 
-  const handleSaveWorkspace = async () => {
-    if (isReadOnly) {
-      setStatus("Check out the draft to edit.");
-      return;
-    }
-    try {
-      const graph = flowToGraph(nodes, edges);
-      const updated = await api.updateWorkspace({
-        graph,
-        layers,
-        drift,
+  const handleNodeDragStop = useCallback(
+    (_event: unknown, draggedNode: Node<PlanNodeData>) => {
+      if (isEditingLocked || draggedNode.data.kind === "platform") {
+        return;
+      }
+      const absolutePosition = resolveAbsolutePosition(draggedNode, nodes);
+      const targetPlatform = findPlatformAtPosition(absolutePosition, nodes);
+      const nextParentId = targetPlatform?.id;
+      if ((draggedNode.parentNode ?? null) === (nextParentId ?? null)) {
+        return;
+      }
+      setNodes((current) => {
+        const parent = nextParentId
+          ? current.find((node) => node.id === nextParentId)
+          : undefined;
+        const parentPosition = parent ? parent.position : null;
+        return current.map((node) => {
+          if (node.id !== draggedNode.id) {
+            return node;
+          }
+          if (parent && parentPosition) {
+            return {
+              ...node,
+              parentNode: parent.id,
+              extent: "parent",
+              zIndex: 1,
+              position: {
+                x: absolutePosition.x - parentPosition.x,
+                y: absolutePosition.y - parentPosition.y,
+              },
+              positionAbsolute: undefined,
+              dragging: false,
+            };
+          }
+          return {
+            ...node,
+            parentNode: undefined,
+            extent: undefined,
+            zIndex: 1,
+            position: absolutePosition,
+            positionAbsolute: undefined,
+            dragging: false,
+          };
+        });
       });
-      applyWorkspace(updated);
-      await loadVersions();
-      setStatus("Workspace saved.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Failed to save workspace.");
-    }
-  };
+      setDirty(true);
+    },
+    [isEditingLocked, nodes, setNodes],
+  );
 
   const handleCreateVersion = async () => {
-    if (isReadOnly) {
-      setStatus("Check out the draft to save a version.");
+    if (isEditingLocked) {
+      setStatus(
+        isReadOnly
+          ? "Check out the draft to save a version."
+          : "Version is loading.",
+      );
       return;
     }
     if (!versionName.trim()) {
@@ -464,58 +680,28 @@ export const WorkspaceView = ({
       setStatus("Draft already loaded.");
       return;
     }
+    if (isSwitchingVersion) {
+      return;
+    }
     try {
-      setLoading(true);
+      setIsSwitchingVersion(true);
       if (isActiveDraft && dirty) {
         const graph = flowToGraph(nodes, edges);
         await api.updateWorkspace({ graph, layers, drift });
       }
       const workspace = await api.checkoutVersion(versionId, isActiveDraft);
       applyWorkspace(workspace);
-      setPlan(null);
       await loadVersions({ selectId: versionId });
       setStatus("Version checked out.");
     } catch (error) {
       console.error(error);
       setStatus("Failed to check out version.");
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGeneratePlan = async () => {
-    try {
-      const generated = await api.createPlan(baseVersionId);
-      setPlan(generated);
-      setStatus("Plan generated.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Failed to generate plan.");
-    }
-  };
-
-  const handleUpdateDrift = async (
-    nodeId: string,
-    status: "in_sync" | "drifted",
-  ) => {
-    if (isReadOnly) {
-      setStatus("Check out the draft to edit.");
-      return;
-    }
-    try {
-      const updated = await api.updateDrift({ nodeId, status });
-      setDrift(updated.drift);
-      setNodes((current) => applyDriftStatus(current, updated.drift));
-      setStatus("Drift updated.");
-    } catch (error) {
-      console.error(error);
-      setStatus("Failed to update drift.");
+      setIsSwitchingVersion(false);
     }
   };
 
   const handleResetStatus = () => setStatus(null);
-
-  const driftNodes = nodes;
 
   return (
     <div className="workspace">
@@ -539,12 +725,12 @@ export const WorkspaceView = ({
           <section className="panel">
             <div className="panel__title">Palette</div>
             <div className="panel__content">
-              {nodePalette.map((item) => (
+              {paletteItems.map((item) => (
                 <button
                   key={item.kind}
                   className="palette__item"
-                  draggable={!isReadOnly}
-                  disabled={isReadOnly}
+                  draggable={!isEditingLocked}
+                  disabled={isEditingLocked}
                   onClick={() => handleAddNode(item.kind)}
                   onDragStart={(event) => handleDragStart(event, item.kind)}
                 >
@@ -557,84 +743,68 @@ export const WorkspaceView = ({
             </div>
           </section>
 
-          <section className="panel">
-            <div className="panel__title">Planes</div>
-            <div className="panel__content">
-              {layers.map((layer) => (
-                <div key={layer.id} className="layer">
-                  <button
-                    className={`layer__toggle ${layer.visible ? "is-active" : ""}`}
-                    onClick={() => handleToggleLayer(layer.id)}
-                    disabled={isReadOnly}
-                    style={{ borderColor: layer.color }}
-                  >
-                    <span
-                      className="layer__dot"
-                      style={{ background: layer.color }}
-                    />
-                    {layer.name}
-                  </button>
-                  <button
-                    className={`layer__select ${activeLayerId === layer.id ? "is-active" : ""}`}
-                    onClick={() => setActiveLayerId(layer.id)}
-                  >
-                    Active
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel">
-            <div className="panel__title">Workspace</div>
-            <div className="panel__content panel__content--stack">
-              <button onClick={handleSaveWorkspace} disabled={loading || isReadOnly}>
-                Save workspace
-              </button>
-              <button className="ghost" onClick={loadWorkspace}>
-                Reload
-              </button>
-              <div className={`workspace__status ${dirty ? "is-dirty" : ""}`}>
-                {dirty ? "Unsaved changes" : "All changes saved"}
-              </div>
-            </div>
-          </section>
         </aside>
 
-        <main
-          className="workspace__canvas"
-          ref={reactFlowWrapper}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-        >
-          <div className="canvas__overlay">
-            <span>Visual Infrastructure Plane</span>
-          </div>
-          {isReadOnly ? (
-            <div className="canvas__readonly">
-              <span>Read-only version</span>
-            </div>
-          ) : null}
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={handleConnect}
-            nodesDraggable={!isReadOnly}
-            nodesConnectable={!isReadOnly}
-            elementsSelectable={!isReadOnly}
-            nodeTypes={nodeTypes}
-            onInit={(instance) => {
-              reactFlowInstance.current = instance;
-            }}
-            proOptions={{ hideAttribution: true }}
-            fitView
+        <main className={`workspace__canvas ${isReadOnly ? "is-readonly" : ""}`}>
+          <div
+            className="workspace__canvas-body"
+            ref={reactFlowWrapper}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
           >
-            <Background gap={24} size={1} />
-            <MiniMap zoomable pannable />
-            <Controls />
-          </ReactFlow>
+            <div className="canvas__overlay">
+              <span>Visual Infrastructure Plane</span>
+            </div>
+            {isBusy || isReadOnly ? (
+              <div className="canvas__readonly">
+                {overlayLabel ? <span>{overlayLabel}</span> : null}
+              </div>
+            ) : null}
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={handleConnect}
+              onNodeDragStop={handleNodeDragStop}
+              nodesDraggable={!isEditingLocked}
+              nodesConnectable={!isEditingLocked}
+              elementsSelectable={!isEditingLocked}
+              nodeTypes={nodeTypes}
+              onInit={(instance) => {
+                reactFlowInstance.current = instance;
+              }}
+              proOptions={{ hideAttribution: true }}
+              elevateNodesOnSelect={false}
+              fitView
+            >
+              <Background gap={24} size={1} />
+              <MiniMap zoomable pannable />
+              <Controls />
+            </ReactFlow>
+          </div>
+          <div className="layer-tabs" role="tablist" aria-label="Workspace layers">
+            {layers
+              .slice()
+              .sort((left, right) => left.order - right.order)
+              .map((layer) => (
+                <button
+                  key={layer.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeLayerId === layer.id}
+                  className={`layer-tab ${activeLayerId === layer.id ? "is-active" : ""}`}
+                  onClick={() => handleSelectLayer(layer.id)}
+                  style={
+                    {
+                      "--layer-color": layer.color,
+                    } as CSSProperties
+                  }
+                >
+                  {layer.name}
+                </button>
+              ))}
+          </div>
         </main>
 
         <aside className="workspace__sidebar workspace__sidebar--right">
@@ -645,7 +815,7 @@ export const WorkspaceView = ({
                 <span>Version name</span>
                 <input
                   value={versionName}
-                  disabled={isReadOnly}
+                  disabled={isEditingLocked}
                   onChange={(event) => setVersionName(event.target.value)}
                   placeholder="e.g. multi-region rollout"
                 />
@@ -654,12 +824,12 @@ export const WorkspaceView = ({
                 <span>Notes</span>
                 <textarea
                   value={versionNotes}
-                  disabled={isReadOnly}
+                  disabled={isEditingLocked}
                   onChange={(event) => setVersionNotes(event.target.value)}
                   placeholder="What changed and why?"
                 />
               </label>
-              <button onClick={handleCreateVersion} disabled={isReadOnly}>
+              <button onClick={handleCreateVersion} disabled={isEditingLocked}>
                 Save version
               </button>
               <div className="versions">
@@ -671,7 +841,7 @@ export const WorkspaceView = ({
                       key={version.id}
                       className={`version ${baseVersionId === version.id ? "is-active" : ""}`}
                       onClick={() => handleCheckoutVersion(version.id)}
-                      disabled={version.id === LOCAL_DRAFT_ID}
+                      disabled={version.id === LOCAL_DRAFT_ID || isBusy}
                     >
                       <div>
                         {version.id === LOCAL_DRAFT_ID
@@ -691,78 +861,6 @@ export const WorkspaceView = ({
               </div>
             </div>
           </section>
-
-          <section className="panel">
-            <div className="panel__title">Execution Plan</div>
-            <div className="panel__content panel__content--stack">
-              <button onClick={handleGeneratePlan}>Generate plan</button>
-              {plan ? (
-                <div className="plan">
-                  <div className="plan__stats">
-                    <span>+{plan.stats.adds}</span>
-                    <span>~{plan.stats.updates}</span>
-                    <span>-{plan.stats.deletes}</span>
-                  </div>
-                  <div className="plan__list">
-                    {plan.operations.map((op) => (
-                      <div
-                        key={op.id}
-                        className={`plan__item plan__item--${op.action}`}
-                      >
-                        <div className="plan__item-title">{op.summary}</div>
-                        <div className="plan__item-meta">
-                          {op.target} · {op.targetId}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="muted">
-                  Generate a plan to see the execution steps.
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="panel">
-            <div className="panel__title">Drift</div>
-            <div className="panel__content panel__content--stack">
-              {driftNodes.length === 0 ? (
-                <div className="muted">No nodes available yet.</div>
-              ) : (
-                driftNodes.map((node) => (
-                  <div key={node.id} className="drift">
-                    <div>
-                      <div className="drift__label">{node.data.label}</div>
-                      <div className="drift__meta">
-                        {node.data.kind} · {node.data.driftStatus}
-                      </div>
-                    </div>
-                    <div className="drift__actions">
-                      <button
-                        onClick={() => handleUpdateDrift(node.id, "drifted")}
-                        className="ghost"
-                        disabled={isReadOnly}
-                      >
-                        Mark drifted
-                      </button>
-                      <button
-                        onClick={() => handleUpdateDrift(node.id, "in_sync")}
-                        className="ghost"
-                        disabled={isReadOnly}
-                      >
-                        Mark resolved
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div className="drift__hint">
-                Use drift to reconcile live infra vs planned changes.
-              </div>
-            </div>
-          </section>
         </aside>
       </div>
 
@@ -772,7 +870,6 @@ export const WorkspaceView = ({
         </div>
       ) : null}
 
-      {loading ? <div className="loading">Loading workspace...</div> : null}
     </div>
   );
 };

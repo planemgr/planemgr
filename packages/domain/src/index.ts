@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const nodeKindSchema = z.enum([
+  "platform",
   "compute",
   "service",
   "network",
@@ -10,6 +11,12 @@ export const nodeKindSchema = z.enum([
   "security"
 ]);
 export type NodeKind = z.infer<typeof nodeKindSchema>;
+
+export const nodeSizeSchema = z.object({
+  width: z.number(),
+  height: z.number()
+});
+export type NodeSize = z.infer<typeof nodeSizeSchema>;
 
 export const edgeKindSchema = z.enum(["data", "control", "network"]);
 export type EdgeKind = z.infer<typeof edgeKindSchema>;
@@ -26,6 +33,7 @@ export const graphNodeSchema = z.object({
   label: z.string().min(1),
   layerId: z.string().min(1),
   position: positionSchema,
+  size: nodeSizeSchema.optional(),
   config: z.record(z.unknown()).optional()
 });
 export type GraphNode = z.infer<typeof graphNodeSchema>;
@@ -149,10 +157,10 @@ export type VersionCreateInput = z.infer<typeof versionCreateSchema>;
 export type DriftUpdateInput = z.infer<typeof driftUpdateSchema>;
 
 export const DEFAULT_LAYERS: Layer[] = [
-  { id: "infra", name: "Infrastructure Plane", color: "#ffb454", visible: true, order: 1 },
-  { id: "control", name: "Control Plane", color: "#7cc4ff", visible: true, order: 2 },
-  { id: "data", name: "Data Plane", color: "#7ef3b5", visible: true, order: 3 },
-  { id: "service", name: "Service Plane", color: "#f37cc1", visible: true, order: 4 }
+  { id: "physical", name: "Physical", color: "#f2c879", visible: true, order: 1 },
+  { id: "infra", name: "Infrastructure", color: "#ffb454", visible: true, order: 2 },
+  { id: "control", name: "Control", color: "#7cc4ff", visible: true, order: 3 },
+  { id: "service", name: "Services", color: "#f37cc1", visible: true, order: 4 }
 ];
 
 export const DEFAULT_GRAPH: Graph = {

@@ -8,12 +8,14 @@ import {
   edgeKindSchema,
   layerSchema,
   nodeKindSchema,
+  nodeSizeSchema,
   type DriftItem,
   type DriftState,
   type Graph,
   type GraphEdge,
   type GraphNode,
   type Layer,
+  type NodeSize,
   type PlanVersion,
   type Position,
   type Workspace,
@@ -57,6 +59,7 @@ type PlanemgrTfState = {
 
 type NodeMetadata = {
   position?: Position;
+  size?: NodeSize;
   drift?: DriftItem;
   [key: string]: unknown;
 };
@@ -333,12 +336,17 @@ const buildWorkspaceGraph = (
       updated = true;
     }
 
+    const sizeValue = isRecord(metaEntry.size) ? metaEntry.size : undefined;
+    const sizeParsed = nodeSizeSchema.safeParse(sizeValue);
+    const size = sizeParsed.success ? sizeParsed.data : undefined;
+
     nodes.push({
       id,
       kind: definition.kind,
       label: definition.label,
       layerId: definition.layerId,
       position,
+      size: definition.kind === "platform" ? size : undefined,
       config: definition.config
     });
   }
@@ -541,6 +549,11 @@ export class IacStorage implements Storage {
     for (const node of input.graph.nodes) {
       const metaEntry = isRecord(metadataNodes[node.id]) ? { ...metadataNodes[node.id] } : {};
       metaEntry.position = node.position;
+      if (node.kind === "platform" && node.size) {
+        metaEntry.size = node.size;
+      } else if (node.kind !== "platform") {
+        delete metaEntry.size;
+      }
       if (driftState[node.id]) {
         metaEntry.drift = driftState[node.id];
       }

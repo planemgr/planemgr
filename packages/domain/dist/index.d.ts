@@ -1,6 +1,17 @@
 import { z } from "zod";
-export declare const nodeKindSchema: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+export declare const nodeKindSchema: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
 export type NodeKind = z.infer<typeof nodeKindSchema>;
+export declare const nodeSizeSchema: z.ZodObject<{
+    width: z.ZodNumber;
+    height: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    width: number;
+    height: number;
+}, {
+    width: number;
+    height: number;
+}>;
+export type NodeSize = z.infer<typeof nodeSizeSchema>;
 export declare const edgeKindSchema: z.ZodEnum<["data", "control", "network"]>;
 export type EdgeKind = z.infer<typeof edgeKindSchema>;
 export declare const positionSchema: z.ZodObject<{
@@ -16,7 +27,7 @@ export declare const positionSchema: z.ZodObject<{
 export type Position = z.infer<typeof positionSchema>;
 export declare const graphNodeSchema: z.ZodObject<{
     id: z.ZodString;
-    kind: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+    kind: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
     label: z.ZodString;
     layerId: z.ZodString;
     position: z.ZodObject<{
@@ -29,26 +40,44 @@ export declare const graphNodeSchema: z.ZodObject<{
         x: number;
         y: number;
     }>;
+    size: z.ZodOptional<z.ZodObject<{
+        width: z.ZodNumber;
+        height: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        width: number;
+        height: number;
+    }, {
+        width: number;
+        height: number;
+    }>>;
     config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
     id: string;
-    kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+    kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
     label: string;
     layerId: string;
     position: {
         x: number;
         y: number;
     };
+    size?: {
+        width: number;
+        height: number;
+    } | undefined;
     config?: Record<string, unknown> | undefined;
 }, {
     id: string;
-    kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+    kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
     label: string;
     layerId: string;
     position: {
         x: number;
         y: number;
     };
+    size?: {
+        width: number;
+        height: number;
+    } | undefined;
     config?: Record<string, unknown> | undefined;
 }>;
 export type GraphNode = z.infer<typeof graphNodeSchema>;
@@ -75,7 +104,7 @@ export type GraphEdge = z.infer<typeof graphEdgeSchema>;
 export declare const graphSchema: z.ZodObject<{
     nodes: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
-        kind: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+        kind: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
         label: z.ZodString;
         layerId: z.ZodString;
         position: z.ZodObject<{
@@ -88,26 +117,44 @@ export declare const graphSchema: z.ZodObject<{
             x: number;
             y: number;
         }>;
+        size: z.ZodOptional<z.ZodObject<{
+            width: z.ZodNumber;
+            height: z.ZodNumber;
+        }, "strip", z.ZodTypeAny, {
+            width: number;
+            height: number;
+        }, {
+            width: number;
+            height: number;
+        }>>;
         config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, "strip", z.ZodTypeAny, {
         id: string;
-        kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+        kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
         label: string;
         layerId: string;
         position: {
             x: number;
             y: number;
         };
+        size?: {
+            width: number;
+            height: number;
+        } | undefined;
         config?: Record<string, unknown> | undefined;
     }, {
         id: string;
-        kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+        kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
         label: string;
         layerId: string;
         position: {
             x: number;
             y: number;
         };
+        size?: {
+            width: number;
+            height: number;
+        } | undefined;
         config?: Record<string, unknown> | undefined;
     }>, "many">;
     edges: z.ZodArray<z.ZodObject<{
@@ -132,13 +179,17 @@ export declare const graphSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     nodes: {
         id: string;
-        kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+        kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
         label: string;
         layerId: string;
         position: {
             x: number;
             y: number;
         };
+        size?: {
+            width: number;
+            height: number;
+        } | undefined;
         config?: Record<string, unknown> | undefined;
     }[];
     edges: {
@@ -151,13 +202,17 @@ export declare const graphSchema: z.ZodObject<{
 }, {
     nodes: {
         id: string;
-        kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+        kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
         label: string;
         layerId: string;
         position: {
             x: number;
             y: number;
         };
+        size?: {
+            width: number;
+            height: number;
+        } | undefined;
         config?: Record<string, unknown> | undefined;
     }[];
     edges: {
@@ -225,7 +280,7 @@ export declare const workspaceSchema: z.ZodObject<{
     graph: z.ZodObject<{
         nodes: z.ZodArray<z.ZodObject<{
             id: z.ZodString;
-            kind: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+            kind: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
             label: z.ZodString;
             layerId: z.ZodString;
             position: z.ZodObject<{
@@ -238,26 +293,44 @@ export declare const workspaceSchema: z.ZodObject<{
                 x: number;
                 y: number;
             }>;
+            size: z.ZodOptional<z.ZodObject<{
+                width: z.ZodNumber;
+                height: z.ZodNumber;
+            }, "strip", z.ZodTypeAny, {
+                width: number;
+                height: number;
+            }, {
+                width: number;
+                height: number;
+            }>>;
             config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, "strip", z.ZodTypeAny, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }>, "many">;
         edges: z.ZodArray<z.ZodObject<{
@@ -282,13 +355,17 @@ export declare const workspaceSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -301,13 +378,17 @@ export declare const workspaceSchema: z.ZodObject<{
     }, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -357,13 +438,17 @@ export declare const workspaceSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -393,13 +478,17 @@ export declare const workspaceSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -535,7 +624,7 @@ export declare const planVersionSchema: z.ZodObject<{
     graph: z.ZodObject<{
         nodes: z.ZodArray<z.ZodObject<{
             id: z.ZodString;
-            kind: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+            kind: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
             label: z.ZodString;
             layerId: z.ZodString;
             position: z.ZodObject<{
@@ -548,26 +637,44 @@ export declare const planVersionSchema: z.ZodObject<{
                 x: number;
                 y: number;
             }>;
+            size: z.ZodOptional<z.ZodObject<{
+                width: z.ZodNumber;
+                height: z.ZodNumber;
+            }, "strip", z.ZodTypeAny, {
+                width: number;
+                height: number;
+            }, {
+                width: number;
+                height: number;
+            }>>;
             config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, "strip", z.ZodTypeAny, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }>, "many">;
         edges: z.ZodArray<z.ZodObject<{
@@ -592,13 +699,17 @@ export declare const planVersionSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -611,13 +722,17 @@ export declare const planVersionSchema: z.ZodObject<{
     }, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -654,13 +769,17 @@ export declare const planVersionSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -687,13 +806,17 @@ export declare const planVersionSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -738,7 +861,7 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
     graph: z.ZodObject<{
         nodes: z.ZodArray<z.ZodObject<{
             id: z.ZodString;
-            kind: z.ZodEnum<["compute", "service", "network", "storage", "control", "data", "security"]>;
+            kind: z.ZodEnum<["platform", "compute", "service", "network", "storage", "control", "data", "security"]>;
             label: z.ZodString;
             layerId: z.ZodString;
             position: z.ZodObject<{
@@ -751,26 +874,44 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
                 x: number;
                 y: number;
             }>;
+            size: z.ZodOptional<z.ZodObject<{
+                width: z.ZodNumber;
+                height: z.ZodNumber;
+            }, "strip", z.ZodTypeAny, {
+                width: number;
+                height: number;
+            }, {
+                width: number;
+                height: number;
+            }>>;
             config: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, "strip", z.ZodTypeAny, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }, {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }>, "many">;
         edges: z.ZodArray<z.ZodObject<{
@@ -795,13 +936,17 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -814,13 +959,17 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
     }, {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -867,13 +1016,17 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
@@ -900,13 +1053,17 @@ export declare const workspaceUpdateSchema: z.ZodObject<{
     graph: {
         nodes: {
             id: string;
-            kind: "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
+            kind: "platform" | "compute" | "service" | "network" | "storage" | "control" | "data" | "security";
             label: string;
             layerId: string;
             position: {
                 x: number;
                 y: number;
             };
+            size?: {
+                width: number;
+                height: number;
+            } | undefined;
             config?: Record<string, unknown> | undefined;
         }[];
         edges: {
