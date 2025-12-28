@@ -60,6 +60,27 @@ export const registerWorkspaceRoutes = async (app: FastifyInstance) => {
     reply.send(version);
   });
 
+  app.post("/api/versions/:id/checkout", async (request, reply) => {
+    if (!requireAuth(request, reply)) {
+      return;
+    }
+    const { id } = request.params as { id: string };
+    try {
+      const body = request.body as { commitDraft?: boolean } | undefined;
+      const workspace = await app.storage.checkoutVersion(id, {
+        commitDraft: body?.commitDraft
+      });
+      reply.send(workspace);
+    } catch (error) {
+      if (error instanceof Error && error.message === "version_not_found") {
+        reply.code(404).send({ error: "not_found" });
+        return;
+      }
+      request.log.error(error);
+      reply.code(500).send({ error: "checkout_failed" });
+    }
+  });
+
   app.post("/api/versions", async (request, reply) => {
     if (!requireAuth(request, reply)) {
       return;

@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import path from "node:path";
 
 dotenv.config();
 
@@ -11,6 +12,9 @@ const sessionSecret = process.env.SESSION_SECRET ?? "dev-session-secret-change-m
 const databaseUrl =
   process.env.DATABASE_URL ?? "postgres://planemgr:planemgr@localhost:5432/planemgr";
 const port = Number(process.env.API_PORT ?? "4000");
+const iacDir = process.env.IAC_DIR
+  ? path.resolve(process.env.IAC_DIR)
+  : path.resolve(process.cwd(), "iac");
 const corsOrigins = (process.env.CORS_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((value) => value.trim())
@@ -32,5 +36,6 @@ export const config = {
   sessionSecret,
   databaseUrl,
   port,
+  iacDir,
   corsOrigins
 };

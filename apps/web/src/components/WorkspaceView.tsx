@@ -25,6 +25,7 @@ import type {
   NodeKind,
   Plan,
   PlanVersion,
+  Workspace,
 } from "@planemgr/domain";
 import { api } from "../api";
 import {
@@ -35,6 +36,9 @@ import {
 } from "../graph";
 import { PlanNode } from "./PlanNode";
 import "reactflow/dist/style.css";
+
+const LOCAL_DRAFT_ID = "draft-local";
+const DRAFT_COMMIT_NAME = "Draft: workspace";
 
 const nodePalette: { kind: NodeKind; label: string; description: string }[] = [
   {
@@ -127,6 +131,7 @@ export const WorkspaceView = ({
   const [baseVersionId, setBaseVersionId] = useState<string | undefined>(
     undefined,
   );
+  const [draftCreatedAt, setDraftCreatedAt] = useState<string | null>(null);
   const [activeLayerId, setActiveLayerId] = useState<string | undefined>(
     undefined,
   );
@@ -139,32 +144,116 @@ export const WorkspaceView = ({
 
   const nodeTypes = useMemo(() => ({ planNode: PlanNode }), []);
 
+  const activeVersion = useMemo(
+    () => versions.find((version) => version.id === baseVersionId),
+    [versions, baseVersionId],
+  );
+
+  const isActiveDraft =
+    !baseVersionId ||
+    baseVersionId === LOCAL_DRAFT_ID ||
+    activeVersion?.name === DRAFT_COMMIT_NAME;
+  const isReadOnly = !isActiveDraft;
+
+  const applyWorkspace = useCallback(
+    (workspace: Workspace) => {
+      setLayers(workspace.layers);
+      setDrift(workspace.drift);
+      setActiveLayerId((current) =>
+        current && workspace.layers.some((layer) => layer.id === current)
+          ? current
+          : workspace.layers[0]?.id,
+      );
+      const flowNodes = graphToFlowNodes(
+        workspace.graph,
+        workspace.layers,
+        workspace.drift,
+      );
+      const flowEdges = applyEdgeVisibility(
+        graphToFlowEdges(workspace.graph),
+        flowNodes,
+      );
+      setNodes(flowNodes);
+      setEdges(flowEdges);
+      setDirty(false);
+    },
+    [setEdges, setNodes],
+  );
+
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
     const workspace = await api.getWorkspace();
-    setLayers(workspace.layers);
-    setDrift(workspace.drift);
-    setActiveLayerId((current) => current ?? workspace.layers[0]?.id);
-    const flowNodes = graphToFlowNodes(
-      workspace.graph,
-      workspace.layers,
-      workspace.drift,
-    );
-    const flowEdges = applyEdgeVisibility(
-      graphToFlowEdges(workspace.graph),
-      flowNodes,
-    );
-    setNodes(flowNodes);
-    setEdges(flowEdges);
-    setDirty(false);
+    applyWorkspace(workspace);
     setLoading(false);
-  }, [setEdges, setNodes]);
+  }, [applyWorkspace]);
 
-  const loadVersions = useCallback(async () => {
-    const response = await api.listVersions();
-    setVersions(response.versions);
-    setBaseVersionId((current) => current ?? response.versions[0]?.id);
-  }, []);
+  const loadVersions = useCallback(
+    async (options?: { selectId?: string; preserveSelection?: boolean }) => {
+      const response = await api.listVersions();
+      const defaultId =
+        response.versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id ??
+        response.versions[0]?.id;
+      setVersions(response.versions);
+      setBaseVersionId((current) => {
+        if (options?.selectId) {
+          return options.selectId;
+        }
+        if (
+          options?.preserveSelection &&
+          current &&
+          response.versions.some((version) => version.id === current)
+        ) {
+          return current;
+        }
+        if (current === LOCAL_DRAFT_ID) {
+          return defaultId ?? current;
+        }
+        if (current && response.versions.some((version) => version.id === current)) {
+          return current;
+        }
+        return defaultId ?? current;
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (dirty) {
+      setDraftCreatedAt((current) => current ?? new Date().toISOString());
+    } else {
+      setDraftCreatedAt(null);
+    }
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!dirty && baseVersionId === LOCAL_DRAFT_ID) {
+      const draftId = versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id;
+      setBaseVersionId(draftId ?? versions[0]?.id);
+    }
+  }, [dirty, baseVersionId, versions]);
+
+  useEffect(() => {
+    if (dirty && !versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
+      setBaseVersionId((current) => current ?? LOCAL_DRAFT_ID);
+    }
+  }, [dirty, versions]);
+
+  const displayVersions = useMemo(() => {
+    if (!dirty || versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
+      return versions;
+    }
+    const graph = flowToGraph(nodes, edges);
+    const draft: PlanVersion = {
+      id: LOCAL_DRAFT_ID,
+      workspaceId: "local",
+      name: DRAFT_COMMIT_NAME,
+      notes: "Unsaved local changes.",
+      graph,
+      layers,
+      createdAt: draftCreatedAt ?? new Date().toISOString(),
+    };
+    return [draft, ...versions];
+  }, [dirty, versions, nodes, edges, layers, draftCreatedAt]);
 
   useEffect(() => {
     Promise.all([loadWorkspace(), loadVersions()]).catch((error) => {
@@ -176,27 +265,37 @@ export const WorkspaceView = ({
 
   const handleNodesChange = useCallback(
     (changes: Parameters<typeof onNodesChange>[0]) => {
+      if (isReadOnly) {
+        return;
+      }
       onNodesChange(changes);
       if (changes.length > 0) {
         setDirty(true);
       }
     },
-    [onNodesChange],
+    [onNodesChange, isReadOnly],
   );
 
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
+      if (isReadOnly) {
+        return;
+      }
       onEdgesChange(changes);
       if (changes.length > 0) {
         setDirty(true);
       }
     },
-    [onEdgesChange],
+    [onEdgesChange, isReadOnly],
   );
 
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) {
+        return;
+      }
+      if (isReadOnly) {
+        setStatus("Check out the draft to edit.");
         return;
       }
       const edge: Edge = {
@@ -209,10 +308,14 @@ export const WorkspaceView = ({
       setEdges((current) => addEdge(edge, current));
       setDirty(true);
     },
-    [setEdges],
+    [setEdges, isReadOnly],
   );
 
   const handleToggleLayer = (layerId: string) => {
+    if (isReadOnly) {
+      setStatus("Check out the draft to edit.");
+      return;
+    }
     const updated = layers.map((layer) =>
       layer.id === layerId ? { ...layer, visible: !layer.visible } : layer,
     );
@@ -225,6 +328,10 @@ export const WorkspaceView = ({
 
   const handleAddNode = useCallback(
     (kind: NodeKind, position?: XYPosition) => {
+      if (isReadOnly) {
+        setStatus("Check out the draft to edit.");
+        return;
+      }
       const layerId = activeLayerId ?? layers[0]?.id;
       if (!layerId) {
         return;
@@ -250,15 +357,18 @@ export const WorkspaceView = ({
       setNodes((current) => [...current, newNode]);
       setDirty(true);
     },
-    [activeLayerId, layers, setNodes],
+    [activeLayerId, layers, setNodes, isReadOnly],
   );
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLButtonElement>, kind: NodeKind) => {
+      if (isReadOnly) {
+        return;
+      }
       event.dataTransfer.setData("application/planemgr-node", kind);
       event.dataTransfer.effectAllowed = "move";
     },
-    [],
+    [isReadOnly],
   );
 
   const handleDragOver = useCallback((event: DragEvent) => {
@@ -269,6 +379,10 @@ export const WorkspaceView = ({
   const handleDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault();
+      if (isReadOnly) {
+        setStatus("Check out the draft to edit.");
+        return;
+      }
 
       const kind = event.dataTransfer.getData("application/planemgr-node");
       if (!kind || !nodePalette.some((item) => item.kind === kind)) {
@@ -297,10 +411,14 @@ export const WorkspaceView = ({
 
       handleAddNode(kind as NodeKind, position);
     },
-    [handleAddNode],
+    [handleAddNode, isReadOnly],
   );
 
   const handleSaveWorkspace = async () => {
+    if (isReadOnly) {
+      setStatus("Check out the draft to edit.");
+      return;
+    }
     try {
       const graph = flowToGraph(nodes, edges);
       const updated = await api.updateWorkspace({
@@ -308,20 +426,8 @@ export const WorkspaceView = ({
         layers,
         drift,
       });
-      setLayers(updated.layers);
-      setDrift(updated.drift);
-      const flowNodes = graphToFlowNodes(
-        updated.graph,
-        updated.layers,
-        updated.drift,
-      );
-      const flowEdges = applyEdgeVisibility(
-        graphToFlowEdges(updated.graph),
-        flowNodes,
-      );
-      setNodes(flowNodes);
-      setEdges(flowEdges);
-      setDirty(false);
+      applyWorkspace(updated);
+      await loadVersions();
       setStatus("Workspace saved.");
     } catch (error) {
       console.error(error);
@@ -330,23 +436,50 @@ export const WorkspaceView = ({
   };
 
   const handleCreateVersion = async () => {
+    if (isReadOnly) {
+      setStatus("Check out the draft to save a version.");
+      return;
+    }
     if (!versionName.trim()) {
       setStatus("Version name is required.");
       return;
     }
     try {
-      const version = await api.createVersion(
+      await api.createVersion(
         versionName.trim(),
         versionNotes.trim() || undefined,
       );
-      setVersions((current) => [version, ...current]);
-      setBaseVersionId(version.id);
+      await loadVersions({ preserveSelection: false });
       setVersionName("");
       setVersionNotes("");
       setStatus("Version saved.");
     } catch (error) {
       console.error(error);
       setStatus("Failed to save version.");
+    }
+  };
+
+  const handleCheckoutVersion = async (versionId: string) => {
+    if (versionId === LOCAL_DRAFT_ID) {
+      setStatus("Draft already loaded.");
+      return;
+    }
+    try {
+      setLoading(true);
+      if (isActiveDraft && dirty) {
+        const graph = flowToGraph(nodes, edges);
+        await api.updateWorkspace({ graph, layers, drift });
+      }
+      const workspace = await api.checkoutVersion(versionId, isActiveDraft);
+      applyWorkspace(workspace);
+      setPlan(null);
+      await loadVersions({ selectId: versionId });
+      setStatus("Version checked out.");
+    } catch (error) {
+      console.error(error);
+      setStatus("Failed to check out version.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -365,6 +498,10 @@ export const WorkspaceView = ({
     nodeId: string,
     status: "in_sync" | "drifted",
   ) => {
+    if (isReadOnly) {
+      setStatus("Check out the draft to edit.");
+      return;
+    }
     try {
       const updated = await api.updateDrift({ nodeId, status });
       setDrift(updated.drift);
@@ -406,7 +543,8 @@ export const WorkspaceView = ({
                 <button
                   key={item.kind}
                   className="palette__item"
-                  draggable
+                  draggable={!isReadOnly}
+                  disabled={isReadOnly}
                   onClick={() => handleAddNode(item.kind)}
                   onDragStart={(event) => handleDragStart(event, item.kind)}
                 >
@@ -427,6 +565,7 @@ export const WorkspaceView = ({
                   <button
                     className={`layer__toggle ${layer.visible ? "is-active" : ""}`}
                     onClick={() => handleToggleLayer(layer.id)}
+                    disabled={isReadOnly}
                     style={{ borderColor: layer.color }}
                   >
                     <span
@@ -449,7 +588,7 @@ export const WorkspaceView = ({
           <section className="panel">
             <div className="panel__title">Workspace</div>
             <div className="panel__content panel__content--stack">
-              <button onClick={handleSaveWorkspace} disabled={loading}>
+              <button onClick={handleSaveWorkspace} disabled={loading || isReadOnly}>
                 Save workspace
               </button>
               <button className="ghost" onClick={loadWorkspace}>
@@ -471,12 +610,20 @@ export const WorkspaceView = ({
           <div className="canvas__overlay">
             <span>Visual Infrastructure Plane</span>
           </div>
+          {isReadOnly ? (
+            <div className="canvas__readonly">
+              <span>Read-only version</span>
+            </div>
+          ) : null}
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
+            nodesDraggable={!isReadOnly}
+            nodesConnectable={!isReadOnly}
+            elementsSelectable={!isReadOnly}
             nodeTypes={nodeTypes}
             onInit={(instance) => {
               reactFlowInstance.current = instance;
@@ -498,6 +645,7 @@ export const WorkspaceView = ({
                 <span>Version name</span>
                 <input
                   value={versionName}
+                  disabled={isReadOnly}
                   onChange={(event) => setVersionName(event.target.value)}
                   placeholder="e.g. multi-region rollout"
                 />
@@ -506,22 +654,34 @@ export const WorkspaceView = ({
                 <span>Notes</span>
                 <textarea
                   value={versionNotes}
+                  disabled={isReadOnly}
                   onChange={(event) => setVersionNotes(event.target.value)}
                   placeholder="What changed and why?"
                 />
               </label>
-              <button onClick={handleCreateVersion}>Save version</button>
+              <button onClick={handleCreateVersion} disabled={isReadOnly}>
+                Save version
+              </button>
               <div className="versions">
-                {versions.length === 0 ? (
+                {displayVersions.length === 0 ? (
                   <div className="muted">No versions yet.</div>
                 ) : (
-                  versions.map((version) => (
+                  displayVersions.map((version) => (
                     <button
                       key={version.id}
                       className={`version ${baseVersionId === version.id ? "is-active" : ""}`}
-                      onClick={() => setBaseVersionId(version.id)}
+                      onClick={() => handleCheckoutVersion(version.id)}
+                      disabled={version.id === LOCAL_DRAFT_ID}
                     >
-                      <div>{version.name}</div>
+                      <div>
+                        {version.id === LOCAL_DRAFT_ID
+                          ? "Draft (unsaved)"
+                          : version.name === DRAFT_COMMIT_NAME
+                            ? dirty
+                              ? "Draft (unsaved)"
+                              : "Draft (current)"
+                            : version.name}
+                      </div>
                       <div className="version__meta">
                         {new Date(version.createdAt).toLocaleString()}
                       </div>
@@ -583,12 +743,14 @@ export const WorkspaceView = ({
                       <button
                         onClick={() => handleUpdateDrift(node.id, "drifted")}
                         className="ghost"
+                        disabled={isReadOnly}
                       >
                         Mark drifted
                       </button>
                       <button
                         onClick={() => handleUpdateDrift(node.id, "in_sync")}
                         className="ghost"
+                        disabled={isReadOnly}
                       >
                         Mark resolved
                       </button>

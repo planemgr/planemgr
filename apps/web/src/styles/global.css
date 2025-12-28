@@ -309,6 +309,22 @@ textarea {
   z-index: 5;
 }
 
+.canvas__readonly {
+  position: absolute;
+  inset: 0;
+  background: rgba(90, 90, 90, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3f3f3f;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  z-index: 4;
+  pointer-events: none;
+}
+
 .workspace__status {
   font-size: 0.85rem;
   color: var(--muted);

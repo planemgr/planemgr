@@ -13,5 +13,6 @@ export interface Storage {
   getVersion(id: string): Promise<PlanVersion | null>;
   getLatestVersion(): Promise<PlanVersion | null>;
   createVersion(input: VersionCreateInput): Promise<PlanVersion>;
+  checkoutVersion(id: string, options?: { commitDraft?: boolean }): Promise<Workspace>;
   updateDrift(input: DriftUpdateInput): Promise<Workspace>;
 }

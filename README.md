@@ -6,15 +6,10 @@ Visual infrastructure manager. Build, layer, and verify infrastructure changes u
 
 1. Copy env defaults:
    - `cp .env.example .env`
-2. Start Postgres:
-   - `docker-compose up -d`
-3. Install dependencies:
+2. Install dependencies:
    - `pnpm install`
-4. Start dev servers:
-   - `docker compose up` or `pnpm dev` if you use your own PostgreSQL instance
-
-If you run the API outside Docker, apply migrations with:
-- `pnpm -C services/api migrate`
+3. Start dev servers:
+   - `docker compose up` or `pnpm dev`
 
 Web: `http://localhost:5173`
 API: `http://localhost:4000`
@@ -22,7 +17,7 @@ API: `http://localhost:4000`
 ## Structure
 
 - `apps/web` - React + Vite UI with React Flow canvas.
-- `services/api` - Fastify API, session auth, plan diff engine, Postgres storage.
+- `services/api` - Fastify API, session auth, plan diff engine, OpenTofu git-backed storage.
 - `packages/domain` - Shared types and schemas.
 - `docs` - Architecture, ADRs, and roadmap.
 - `deploy/helm/planemgr` - Helm chart scaffolding.

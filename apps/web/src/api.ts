@@ -10,10 +10,11 @@ import type {
 const baseUrl = import.meta.env.VITE_API_URL ?? "";
 
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
+  const hasBody = options?.body !== undefined;
   const response = await fetch(`${baseUrl}${path}`, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
       ...(options?.headers ?? {})
     },
     ...options
@@ -43,6 +44,13 @@ export const api = {
     request<PlanVersion>("/api/versions", {
       method: "POST",
       body: JSON.stringify({ name, notes })
+    }),
+  checkoutVersion: (id: string, commitDraft?: boolean) =>
+    request<Workspace>(`/api/versions/${id}/checkout`, {
+      method: "POST",
+      ...(commitDraft !== undefined
+        ? { body: JSON.stringify({ commitDraft }) }
+        : {})
     }),
   createPlan: (baseVersionId?: string) =>
     request<Plan>("/api/plan", {

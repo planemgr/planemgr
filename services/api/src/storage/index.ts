@@ -1,10 +1,6 @@
-import { createPool } from "../db";
-import { PostgresStorage } from "./postgres";
+import { IacStorage } from "./iac";
 
-export const createStorage = (databaseUrl: string) => {
-  const pool = createPool(databaseUrl);
-  return new PostgresStorage(pool);
-};
+export const createStorage = (options: { iacDir: string }) => new IacStorage(options.iacDir);
 
-export { PostgresStorage } from "./postgres";
+export { IacStorage } from "./iac";
 export type { Storage } from "./storage";

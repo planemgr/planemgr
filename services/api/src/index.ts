@@ -1,9 +1,11 @@
 import { config } from "./config";
 import { buildServer } from "./server";
 import { createStorage } from "./storage";
+import { ensureIacEnvironment } from "./services/iac";
 
 const start = async () => {
-  const storage = createStorage(config.databaseUrl);
+  await ensureIacEnvironment(config.iacDir);
+  const storage = createStorage({ iacDir: config.iacDir });
   const app = buildServer(storage);
 
   try {
