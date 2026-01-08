@@ -51,6 +51,11 @@ type PlanemgrEdgeDefinition = {
   label?: string;
 };
 
+type PlatformConfig = {
+  platformType?: string;
+  sshHost?: string;
+};
+
 type PlanemgrTfState = {
   nodes: Record<string, PlanemgrNodeDefinition>;
   edges: Record<string, PlanemgrEdgeDefinition>;
@@ -162,6 +167,48 @@ const parseEdgeDefinitions = (value: unknown): Record<string, PlanemgrEdgeDefini
   return edges;
 };
 
+const sanitizeModuleName = (value: string) =>
+  value.replace(/[^a-zA-Z0-9_]/g, "_");
+
+const resolvePlatformConfig = (node: GraphNode): PlatformConfig => {
+  if (!isRecord(node.config)) {
+    return {};
+  }
+  const platformType =
+    typeof node.config.platformType === "string" ? node.config.platformType : undefined;
+  const sshHost = typeof node.config.sshHost === "string" ? node.config.sshHost : undefined;
+  return { platformType, sshHost };
+};
+
+// Translate platform nodes into OpenTofu module blocks for provisioning.
+const buildPlatformModules = (graph: Graph) => {
+  const modules: Record<string, unknown> = {};
+  for (const node of graph.nodes) {
+    if (node.kind !== "platform") {
+      continue;
+    }
+    if (node.layerId !== "physical") {
+      continue;
+    }
+    const config = resolvePlatformConfig(node);
+    if (config.platformType !== "ssh") {
+      continue;
+    }
+    const host = config.sshHost?.trim();
+    if (!host) {
+      continue;
+    }
+    const moduleName = `platform_${sanitizeModuleName(node.id)}`;
+    modules[moduleName] = {
+      source: "./modules/planemgr-ssh-platform",
+      host,
+      ssh_public_key: "${var.planemgr_ssh_public_key}",
+      ssh_private_key: "${var.planemgr_ssh_private_key}"
+    };
+  }
+  return modules;
+};
+
 const parsePlanemgrTf = (raw: unknown): PlanemgrTfState => {
   if (!isRecord(raw)) {
     return { nodes: {}, edges: {}, layers: [] };
@@ -221,7 +268,8 @@ const buildTfPayload = (graph: Graph, layers: Layer[]) => {
         return [edge.id, definition];
       })
   );
-  return {
+  const modules = buildPlatformModules(graph);
+  const payload: Record<string, unknown> = {
     locals: {
       planemgr: {
         nodes,
@@ -230,6 +278,19 @@ const buildTfPayload = (graph: Graph, layers: Layer[]) => {
       }
     }
   };
+  if (Object.keys(modules).length > 0) {
+    payload.module = modules;
+    payload.variable = {
+      planemgr_ssh_public_key: {
+        type: "string"
+      },
+      planemgr_ssh_private_key: {
+        type: "string",
+        sensitive: true
+      }
+    };
+  }
+  return payload;
 };
 
 const parseMetadata = (raw: unknown): PlanemgrMetadata => {

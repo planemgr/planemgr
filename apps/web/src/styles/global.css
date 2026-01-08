@@ -61,7 +61,8 @@ button.ghost {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -290,6 +291,15 @@ textarea {
 
 .panel__content--stack {
   gap: 0.8rem;
+}
+
+.node-config__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .palette__item {
@@ -568,6 +578,27 @@ textarea {
   margin-top: 0.35rem;
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.platform-node__config {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.platform-node__field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.platform-node__field input,
+.platform-node__field select {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .react-flow__node-platformNode .react-flow__resize-handle {

@@ -18,6 +18,8 @@ export type PlanNodeData = {
   layerColor: string;
   driftStatus: DriftStatus;
   config?: Record<string, unknown>;
+  onUpdateConfig?: (config: Record<string, unknown>) => void;
+  isEditingLocked?: boolean;
 };
 
 export const DEFAULT_PLATFORM_SIZE: NodeSize = { width: 360, height: 240 };

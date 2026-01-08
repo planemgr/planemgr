@@ -26,6 +26,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 - Plan: diff between current workspace and a chosen git version.
 - Platform node: resizable container for PaaS/bare-metal foundations; child nodes store `config.platformId`.
 - User profile: SSH keypair stored in Postgres; UI exposes only the public key while provisioning uses both keys.
+- Platform config: physical platform nodes store `platformType` and SSH host IP; OpenTofu maps SSH platforms to the `planemgr-ssh-platform` module in the IaC repo.
 
 ## Plan pipeline
 

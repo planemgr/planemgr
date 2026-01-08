@@ -36,6 +36,7 @@ import {
   DEFAULT_PLATFORM_SIZE,
   type PlanNodeData,
 } from "../graph";
+import { NodeConfigPanel } from "./NodeConfigPanel";
 import { PlanNode } from "./PlanNode";
 import { PlatformNode } from "./PlatformNode";
 import "reactflow/dist/style.css";
@@ -141,7 +142,8 @@ const createId = (prefix: string) => {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const isPlatformNode = (node: Node<PlanNodeData>) => node.data.kind === "platform";
+const isPlatformNode = (node: Node<PlanNodeData>) =>
+  node.data.kind === "platform";
 
 const parseNumericStyle = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -155,13 +157,19 @@ const parseNumericStyle = (value: unknown): number | null => {
 };
 
 const resolvePlatformSize = (node: Node<PlanNodeData>) => {
-  const width = parseNumericStyle(node.width ?? node.style?.width) ?? DEFAULT_PLATFORM_SIZE.width;
+  const width =
+    parseNumericStyle(node.width ?? node.style?.width) ??
+    DEFAULT_PLATFORM_SIZE.width;
   const height =
-    parseNumericStyle(node.height ?? node.style?.height) ?? DEFAULT_PLATFORM_SIZE.height;
+    parseNumericStyle(node.height ?? node.style?.height) ??
+    DEFAULT_PLATFORM_SIZE.height;
   return { width, height };
 };
 
-const resolveAbsolutePosition = (node: Node<PlanNodeData>, nodes: Node<PlanNodeData>[]) => {
+const resolveAbsolutePosition = (
+  node: Node<PlanNodeData>,
+  nodes: Node<PlanNodeData>[],
+) => {
   if (node.parentNode) {
     const parent = nodes.find((candidate) => candidate.id === node.parentNode);
     if (parent) {
@@ -251,11 +259,20 @@ export const WorkspaceView = ({
   const [activeLayerId, setActiveLayerId] = useState<string | undefined>(
     undefined,
   );
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const isEditingLockedRef = useRef(false);
+  const isReadOnlyRef = useRef(false);
   const activeLayerRef = useRef<string | undefined>(undefined);
   const reactFlowWrapper = useRef<HTMLDivElement | null>(null);
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
+  const nodesRef = useRef<Node<PlanNodeData>[]>([]);
+  const edgesRef = useRef<Edge[]>([]);
+  const layersRef = useRef<Layer[]>([]);
+  const driftRef = useRef<DriftState>({});
+  const isSavingDraftRef = useRef(false);
+  const dirtyRef = useRef(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<PlanNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -268,6 +285,19 @@ export const WorkspaceView = ({
   useEffect(() => {
     activeLayerRef.current = activeLayerId;
   }, [activeLayerId]);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+    edgesRef.current = edges;
+  }, [nodes, edges]);
+
+  useEffect(() => {
+    layersRef.current = layers;
+  }, [layers]);
+
+  useEffect(() => {
+    driftRef.current = drift;
+  }, [drift]);
 
   useEffect(() => {
     let isActive = true;
@@ -337,6 +367,114 @@ export const WorkspaceView = ({
       : "Loading workspace..."
     : null;
 
+  useEffect(() => {
+    isEditingLockedRef.current = isEditingLocked;
+    isReadOnlyRef.current = isReadOnly;
+  }, [isEditingLocked, isReadOnly]);
+
+  const setDirtyState = useCallback((nextDirty: boolean) => {
+    dirtyRef.current = nextDirty;
+    setDirty(nextDirty);
+  }, []);
+
+  const handleUpdateNodeConfig = useCallback(
+    (nodeId: string, nextConfig: Record<string, unknown>) => {
+      if (isEditingLockedRef.current) {
+        if (isReadOnlyRef.current) {
+          setStatus("Check out the draft to edit.");
+        }
+        return;
+      }
+      setNodes((current) => {
+        const updated = current.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  config: nextConfig,
+                },
+              }
+            : node,
+        );
+        nodesRef.current = updated;
+        return updated;
+      });
+      setDirtyState(true);
+    },
+    [setDirtyState, setNodes],
+  );
+
+  const handleUpdateNodeLabel = useCallback(
+    (nodeId: string, nextLabel: string) => {
+      if (isEditingLockedRef.current) {
+        if (isReadOnlyRef.current) {
+          setStatus("Check out the draft to edit.");
+        }
+        return;
+      }
+      setNodes((current) => {
+        const updated = current.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  label: nextLabel,
+                },
+              }
+            : node,
+        );
+        nodesRef.current = updated;
+        return updated;
+      });
+      setDirtyState(true);
+    },
+    [setDirtyState, setNodes],
+  );
+
+  const handleCommitDraft = useCallback(async () => {
+    if (isEditingLockedRef.current) {
+      if (isReadOnlyRef.current) {
+        setStatus("Check out the draft to edit.");
+      }
+      return;
+    }
+    if (!isActiveDraft || !dirtyRef.current || isSavingDraftRef.current) {
+      return;
+    }
+    isSavingDraftRef.current = true;
+    try {
+      const graph = flowToGraph(nodesRef.current, edgesRef.current);
+      await api.updateWorkspace({
+        graph,
+        layers: layersRef.current,
+        drift: driftRef.current,
+      });
+      setDirtyState(false);
+    } catch (error) {
+      console.error(error);
+      setStatus("Failed to save draft.");
+    } finally {
+      isSavingDraftRef.current = false;
+    }
+  }, [isActiveDraft, setDirtyState]);
+
+  // Use the ref so initial bootstrapping does not retrigger the load effect.
+  const attachNodeActions = useCallback(
+    (flowNodes: Node<PlanNodeData>[]) =>
+      flowNodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isEditingLocked: isEditingLockedRef.current,
+          onUpdateConfig: (config: Record<string, unknown>) =>
+            handleUpdateNodeConfig(node.id, config),
+        },
+      })),
+    [handleUpdateNodeConfig],
+  );
+
   const applyWorkspace = useCallback(
     (workspace: Workspace) => {
       const normalizedLayers = normalizeLayers(workspace.layers);
@@ -358,16 +496,30 @@ export const WorkspaceView = ({
         normalizedLayers,
         nextActiveLayerId,
       );
+      const nodesWithActions = attachNodeActions(visibleNodes);
       const flowEdges = applyEdgeVisibility(
         graphToFlowEdges(workspace.graph),
-        visibleNodes,
+        nodesWithActions,
       );
-      setNodes(visibleNodes);
+      setNodes(nodesWithActions);
       setEdges(flowEdges);
-      setDirty(false);
+      setDirtyState(false);
+      setSelectedNodeId(null);
     },
-    [setEdges, setNodes],
+    [attachNodeActions, setDirtyState, setEdges, setNodes],
   );
+
+  useEffect(() => {
+    setNodes((current) =>
+      current.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          isEditingLocked,
+        },
+      })),
+    );
+  }, [isEditingLocked, setNodes]);
 
   const loadWorkspace = useCallback(async () => {
     setIsBootstrapping(true);
@@ -383,8 +535,8 @@ export const WorkspaceView = ({
     async (options?: { selectId?: string; preserveSelection?: boolean }) => {
       const response = await api.listVersions();
       const defaultId =
-        response.versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id ??
-        response.versions[0]?.id;
+        response.versions.find((version) => version.name === DRAFT_COMMIT_NAME)
+          ?.id ?? response.versions[0]?.id;
       setVersions(response.versions);
       setBaseVersionId((current) => {
         if (options?.selectId) {
@@ -400,7 +552,10 @@ export const WorkspaceView = ({
         if (current === LOCAL_DRAFT_ID) {
           return defaultId ?? current;
         }
-        if (current && response.versions.some((version) => version.id === current)) {
+        if (
+          current &&
+          response.versions.some((version) => version.id === current)
+        ) {
           return current;
         }
         return defaultId ?? current;
@@ -419,19 +574,27 @@ export const WorkspaceView = ({
 
   useEffect(() => {
     if (!dirty && baseVersionId === LOCAL_DRAFT_ID) {
-      const draftId = versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id;
+      const draftId = versions.find(
+        (version) => version.name === DRAFT_COMMIT_NAME,
+      )?.id;
       setBaseVersionId(draftId ?? versions[0]?.id);
     }
   }, [dirty, baseVersionId, versions]);
 
   useEffect(() => {
-    if (dirty && !versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
+    if (
+      dirty &&
+      !versions.some((version) => version.name === DRAFT_COMMIT_NAME)
+    ) {
       setBaseVersionId((current) => current ?? LOCAL_DRAFT_ID);
     }
   }, [dirty, versions]);
 
   const displayVersions = useMemo(() => {
-    if (!dirty || versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
+    if (
+      !dirty ||
+      versions.some((version) => version.name === DRAFT_COMMIT_NAME)
+    ) {
       return versions;
     }
     const graph = flowToGraph(nodes, edges);
@@ -462,10 +625,10 @@ export const WorkspaceView = ({
       }
       onNodesChange(changes);
       if (changes.length > 0) {
-        setDirty(true);
+        setDirtyState(true);
       }
     },
-    [onNodesChange, isEditingLocked],
+    [onNodesChange, isEditingLocked, setDirtyState],
   );
 
   const handleEdgesChange = useCallback(
@@ -475,10 +638,10 @@ export const WorkspaceView = ({
       }
       onEdgesChange(changes);
       if (changes.length > 0) {
-        setDirty(true);
+        setDirtyState(true);
       }
     },
-    [onEdgesChange, isEditingLocked],
+    [onEdgesChange, isEditingLocked, setDirtyState],
   );
 
   const handleConnect = useCallback(
@@ -500,9 +663,9 @@ export const WorkspaceView = ({
         data: { kind: "data" },
       };
       setEdges((current) => addEdge(edge, current));
-      setDirty(true);
+      setDirtyState(true);
     },
-    [setEdges, isEditingLocked, isReadOnly],
+    [setDirtyState, setEdges, isEditingLocked, isReadOnly],
   );
 
   const handleSelectLayer = useCallback(
@@ -513,7 +676,9 @@ export const WorkspaceView = ({
       setActiveLayerId(layerId);
       setNodes((current) => {
         const updatedNodes = applyLayerVisibility(current, layers, layerId);
-        setEdges((currentEdges) => applyEdgeVisibility(currentEdges, updatedNodes));
+        setEdges((currentEdges) =>
+          applyEdgeVisibility(currentEdges, updatedNodes),
+        );
         return updatedNodes;
       });
     },
@@ -533,11 +698,10 @@ export const WorkspaceView = ({
         return;
       }
       const layer = layers.find((item) => item.id === layerId);
-      const basePosition =
-        position ?? {
-          x: 180 + Math.random() * 220,
-          y: 120 + Math.random() * 200,
-        };
+      const basePosition = position ?? {
+        x: 180 + Math.random() * 220,
+        y: 120 + Math.random() * 200,
+      };
       const targetPlatform =
         kind !== "platform" && position
           ? findPlatformAtPosition(basePosition, nodes)
@@ -553,10 +717,11 @@ export const WorkspaceView = ({
         : basePosition;
       const config =
         kind === "platform"
-          ? { platform: "generic" }
+          ? { platformType: "ssh", sshHost: "" }
           : { provider: "generic" };
+      const nodeId = createId("node");
       const newNode: Node<PlanNodeData> = {
-        id: createId("node"),
+        id: nodeId,
         type: kind === "platform" ? "platformNode" : "planNode",
         position: resolvedPosition,
         parentNode: targetPlatform?.id,
@@ -570,18 +735,39 @@ export const WorkspaceView = ({
               }
             : undefined,
         data: {
-          label: kind === "platform" ? "Platform" : `${kind[0].toUpperCase()}${kind.slice(1)}`,
+          label:
+            kind === "platform"
+              ? "Platform"
+              : `${kind[0].toUpperCase()}${kind.slice(1)}`,
           kind,
           layerId,
           layerColor: layer?.color ?? "#ffffff",
           driftStatus: "unknown",
           config,
+          isEditingLocked,
+          onUpdateConfig: (nextConfig: Record<string, unknown>) =>
+            handleUpdateNodeConfig(nodeId, nextConfig),
         },
       };
-      setNodes((current) => [...current, newNode]);
-      setDirty(true);
+      setNodes((current) => {
+        const updated = [...current, newNode];
+        nodesRef.current = updated;
+        return updated;
+      });
+      setDirtyState(true);
+      handleCommitDraft();
     },
-    [activeLayerId, layers, nodes, setNodes, isEditingLocked, isReadOnly],
+    [
+      activeLayerId,
+      layers,
+      nodes,
+      setNodes,
+      isEditingLocked,
+      isReadOnly,
+      handleUpdateNodeConfig,
+      handleCommitDraft,
+      setDirtyState,
+    ],
   );
 
   const handleDragStart = useCallback(
@@ -642,7 +828,15 @@ export const WorkspaceView = ({
 
   const handleNodeDragStop = useCallback(
     (_event: unknown, draggedNode: Node<PlanNodeData>) => {
-      if (isEditingLocked || draggedNode.data.kind === "platform") {
+      if (isEditingLocked) {
+        return;
+      }
+      if (draggedNode.data.kind === "platform") {
+        nodesRef.current = nodesRef.current.map((node) =>
+          node.id === draggedNode.id ? { ...node, ...draggedNode } : node,
+        );
+        setDirtyState(true);
+        handleCommitDraft();
         return;
       }
       const absolutePosition = resolveAbsolutePosition(draggedNode, nodes);
@@ -656,7 +850,7 @@ export const WorkspaceView = ({
           ? current.find((node) => node.id === nextParentId)
           : undefined;
         const parentPosition = parent ? parent.position : null;
-        return current.map((node) => {
+        const updated = current.map((node) => {
           if (node.id !== draggedNode.id) {
             return node;
           }
@@ -684,10 +878,13 @@ export const WorkspaceView = ({
             dragging: false,
           };
         });
+        nodesRef.current = updated;
+        return updated;
       });
-      setDirty(true);
+      setDirtyState(true);
+      handleCommitDraft();
     },
-    [isEditingLocked, nodes, setNodes],
+    [handleCommitDraft, isEditingLocked, nodes, setDirtyState, setNodes],
   );
 
   const handleCreateVersion = async () => {
@@ -764,6 +961,17 @@ export const WorkspaceView = ({
     window.setTimeout(() => setProfileStatus(null), 2000);
   };
 
+  const selectedNode = useMemo(
+    () => nodes.find((node) => node.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId],
+  );
+
+  useEffect(() => {
+    if (selectedNodeId && !selectedNode) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNodeId, selectedNode]);
+
   return (
     <div className="workspace">
       <header className="workspace__header">
@@ -790,7 +998,9 @@ export const WorkspaceView = ({
                 {profileError ? (
                   <div className="muted">{profileError}</div>
                 ) : profile ? (
-                  <div className="profile-menu__key">{profile.sshPublicKey}</div>
+                  <div className="profile-menu__key">
+                    {profile.sshPublicKey}
+                  </div>
                 ) : (
                   <div className="muted">Generating key...</div>
                 )}
@@ -838,10 +1048,11 @@ export const WorkspaceView = ({
               ))}
             </div>
           </section>
-
         </aside>
 
-        <main className={`workspace__canvas ${isReadOnly ? "is-readonly" : ""}`}>
+        <main
+          className={`workspace__canvas ${isReadOnly ? "is-readonly" : ""}`}
+        >
           <div
             className="workspace__canvas-body"
             ref={reactFlowWrapper}
@@ -863,6 +1074,9 @@ export const WorkspaceView = ({
               onEdgesChange={handleEdgesChange}
               onConnect={handleConnect}
               onNodeDragStop={handleNodeDragStop}
+              onSelectionChange={(selection) =>
+                setSelectedNodeId(selection.nodes[0]?.id ?? null)
+              }
               nodesDraggable={!isEditingLocked}
               nodesConnectable={!isEditingLocked}
               elementsSelectable={!isEditingLocked}
@@ -879,7 +1093,11 @@ export const WorkspaceView = ({
               <Controls />
             </ReactFlow>
           </div>
-          <div className="layer-tabs" role="tablist" aria-label="Workspace layers">
+          <div
+            className="layer-tabs"
+            role="tablist"
+            aria-label="Workspace layers"
+          >
             {layers
               .slice()
               .sort((left, right) => left.order - right.order)
@@ -904,6 +1122,13 @@ export const WorkspaceView = ({
         </main>
 
         <aside className="workspace__sidebar workspace__sidebar--right">
+          <NodeConfigPanel
+            node={selectedNode}
+            isEditingLocked={isEditingLocked}
+            onUpdateLabel={handleUpdateNodeLabel}
+            onUpdateConfig={handleUpdateNodeConfig}
+            onCommitDraft={handleCommitDraft}
+          />
           <section className="panel">
             <div className="panel__title">Plan Versions</div>
             <div className="panel__content panel__content--stack">
@@ -937,7 +1162,11 @@ export const WorkspaceView = ({
                       key={version.id}
                       className={`version ${baseVersionId === version.id ? "is-active" : ""}`}
                       onClick={() => handleCheckoutVersion(version.id)}
-                      disabled={version.id === LOCAL_DRAFT_ID || isBusy}
+                      disabled={
+                        version.id === LOCAL_DRAFT_ID ||
+                        version.name === DRAFT_COMMIT_NAME ||
+                        isBusy
+                      }
                     >
                       <div>
                         {version.id === LOCAL_DRAFT_ID
@@ -965,7 +1194,6 @@ export const WorkspaceView = ({
           {status}
         </div>
       ) : null}
-
     </div>
   );
 };
