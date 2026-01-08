@@ -23,9 +23,7 @@ const normalizePlatformConfig = (config?: Record<string, unknown>): PlatformConf
     return { platformType: "ssh", sshHost: "" };
   }
   const platformType =
-    typeof config.platformType === "string" && config.platformType === "ssh"
-      ? "ssh"
-      : "ssh";
+    typeof config.platformType === "string" && config.platformType === "ssh" ? "ssh" : "ssh";
   const sshHost = typeof config.sshHost === "string" ? config.sshHost : "";
   return { platformType, sshHost };
 };
@@ -148,9 +146,7 @@ export const NodeConfigPanel = ({
                 ) : null}
               </>
             ) : (
-              <div className="muted">
-                Platform parameters are available on the Physical layer.
-              </div>
+              <div className="muted">Platform parameters are available on the Physical layer.</div>
             )}
           </>
         ) : (

@@ -6,7 +6,7 @@ export const parseBody = <T>(schema: ZodSchema<T>, body: unknown, reply: Fastify
   if (!result.success) {
     reply.code(400).send({
       error: "invalid_payload",
-      details: result.error.flatten()
+      details: result.error.flatten(),
     });
     return null;
   }

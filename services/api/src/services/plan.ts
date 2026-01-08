@@ -1,11 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import type {
-  Graph,
-  GraphEdge,
-  GraphNode,
-  Plan,
-  PlanOperation
-} from "@planemgr/domain";
+import type { Graph, GraphEdge, GraphNode, Plan, PlanOperation } from "@planemgr/domain";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -73,7 +67,7 @@ export const createPlan = (
   workspaceId: string,
   current: Graph,
   base: Graph | null,
-  baseVersionId?: string
+  baseVersionId?: string,
 ): Plan => {
   const operations: PlanOperation[] = [];
   const baseNodes = new Map(base?.nodes.map((node) => [node.id, node]));
@@ -91,7 +85,7 @@ export const createPlan = (
         target: "node",
         targetId: node.id,
         summary: `Create node ${node.label}`,
-        changes: { to: node }
+        changes: { to: node },
       });
       continue;
     }
@@ -103,7 +97,7 @@ export const createPlan = (
         target: "node",
         targetId: node.id,
         summary: `Update node ${node.label}`,
-        changes
+        changes,
       });
     }
   }
@@ -117,7 +111,7 @@ export const createPlan = (
           target: "node",
           targetId: node.id,
           summary: `Remove node ${node.label}`,
-          changes: { from: node }
+          changes: { from: node },
         });
       }
     }
@@ -132,7 +126,7 @@ export const createPlan = (
         target: "edge",
         targetId: edge.id,
         summary: `Create ${edge.kind} connection`,
-        changes: { to: edge }
+        changes: { to: edge },
       });
       continue;
     }
@@ -144,7 +138,7 @@ export const createPlan = (
         target: "edge",
         targetId: edge.id,
         summary: `Update ${edge.kind} connection`,
-        changes
+        changes,
       });
     }
   }
@@ -158,7 +152,7 @@ export const createPlan = (
           target: "edge",
           targetId: edge.id,
           summary: `Remove ${edge.kind} connection`,
-          changes: { from: edge }
+          changes: { from: edge },
         });
       }
     }
@@ -175,7 +169,7 @@ export const createPlan = (
       }
       return accumulator;
     },
-    { adds: 0, updates: 0, deletes: 0 }
+    { adds: 0, updates: 0, deletes: 0 },
   );
 
   return {
@@ -183,6 +177,6 @@ export const createPlan = (
     workspaceId,
     baseVersionId,
     operations,
-    stats
+    stats,
   };
 };

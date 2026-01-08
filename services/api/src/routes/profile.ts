@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { ensureUserSshKeyPair } from "../services/ssh";
-import { requireAuth } from "../utils/auth";
+import { ensureUserSshKeyPair } from "../services/ssh.js";
+import { requireAuth } from "../utils/auth.js";
 
 export const registerProfileRoutes = async (app: FastifyInstance) => {
   app.get("/api/profile", async (request, reply) => {

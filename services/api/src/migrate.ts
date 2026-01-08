@@ -1,8 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { config } from "./config";
-import { createPool } from "./db";
+import { config } from "./config.js";
+import { createPool } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,15 +14,13 @@ const runMigrations = async () => {
 
   try {
     await client.query(
-      "create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())"
+      "create table if not exists schema_migrations (name text primary key, applied_at timestamptz not null default now())",
     );
 
     const applied = await client.query("select name from schema_migrations");
-    const appliedSet = new Set(applied.rows.map((row) => row.name));
+    const appliedSet = new Set(applied.rows.map((row: { name: string }) => row.name));
 
-    const files = (await fs.readdir(migrationsDir))
-      .filter((file) => file.endsWith(".sql"))
-      .sort();
+    const files = (await fs.readdir(migrationsDir)).filter((file) => file.endsWith(".sql")).sort();
 
     for (const file of files) {
       if (appliedSet.has(file)) {

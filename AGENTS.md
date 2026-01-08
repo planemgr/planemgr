@@ -55,3 +55,7 @@ Drift is stored as a per-node status map. The UI surfaces drift and provides res
 - Comment your code if not trivial.
 - Leave structural comments to explain architecture choices and implementation approach.
 - Always update README.md files and AGENTS.md when architecture changes or new features introduced.
+
+# Coding
+
+- Always run `pnpm lint`, `pnpm format` and `pnpm typecheck` after finishing and fix issues to keep the code tidy.

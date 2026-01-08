@@ -7,7 +7,7 @@ import type {
   GraphNode,
   Layer,
   NodeKind,
-  NodeSize
+  NodeSize,
 } from "@planemgr/domain";
 import type { Edge, Node } from "reactflow";
 
@@ -24,8 +24,7 @@ export type PlanNodeData = {
 
 export const DEFAULT_PLATFORM_SIZE: NodeSize = { width: 360, height: 240 };
 
-const layerColorById = (layers: Layer[]) =>
-  new Map(layers.map((layer) => [layer.id, layer.color]));
+const layerColorById = (layers: Layer[]) => new Map(layers.map((layer) => [layer.id, layer.color]));
 
 const parseNumericStyle = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -62,12 +61,12 @@ const platformParentId = (node: GraphNode, platformIds: Set<string>): string | u
 export const graphToFlowNodes = (
   graph: Graph,
   layers: Layer[],
-  drift: DriftState
+  drift: DriftState,
 ): Node<PlanNodeData>[] => {
   const colors = layerColorById(layers);
   const visibility = new Map(layers.map((layer) => [layer.id, layer.visible]));
   const platformIds = new Set(
-    graph.nodes.filter((node) => node.kind === "platform").map((node) => node.id)
+    graph.nodes.filter((node) => node.kind === "platform").map((node) => node.id),
   );
   return graph.nodes.map((node) => {
     const parentId = platformParentId(node, platformIds);
@@ -83,7 +82,7 @@ export const graphToFlowNodes = (
         node.kind === "platform"
           ? {
               width: node.size?.width ?? DEFAULT_PLATFORM_SIZE.width,
-              height: node.size?.height ?? DEFAULT_PLATFORM_SIZE.height
+              height: node.size?.height ?? DEFAULT_PLATFORM_SIZE.height,
             }
           : undefined,
       data: {
@@ -92,8 +91,8 @@ export const graphToFlowNodes = (
         layerId: node.layerId,
         layerColor: colors.get(node.layerId) ?? "#ffffff",
         driftStatus: drift[node.id]?.status ?? "unknown",
-        config: node.config
-      }
+        config: node.config,
+      },
     };
   });
 };
@@ -105,7 +104,7 @@ export const graphToFlowEdges = (graph: Graph): Edge[] =>
     target: edge.target,
     label: edge.label,
     type: "smoothstep",
-    data: { kind: edge.kind }
+    data: { kind: edge.kind },
   }));
 
 export const flowToGraph = (nodes: Node<PlanNodeData>[], edges: Edge[]): Graph => {
@@ -119,9 +118,7 @@ export const flowToGraph = (nodes: Node<PlanNodeData>[], edges: Edge[]): Graph =
       delete config.platformId;
     }
     const size =
-      node.data.kind === "platform"
-        ? resolveNodeSize(node) ?? DEFAULT_PLATFORM_SIZE
-        : undefined;
+      node.data.kind === "platform" ? (resolveNodeSize(node) ?? DEFAULT_PLATFORM_SIZE) : undefined;
     return {
       id: node.id,
       kind: node.data.kind,
@@ -129,7 +126,7 @@ export const flowToGraph = (nodes: Node<PlanNodeData>[], edges: Edge[]): Graph =
       layerId: node.data.layerId,
       position: node.position,
       size,
-      config
+      config,
     };
   });
 
@@ -138,11 +135,11 @@ export const flowToGraph = (nodes: Node<PlanNodeData>[], edges: Edge[]): Graph =
     kind: (edge.data?.kind as EdgeKind) ?? "data",
     source: edge.source,
     target: edge.target,
-    label: typeof edge.label === "string" ? edge.label : undefined
+    label: typeof edge.label === "string" ? edge.label : undefined,
   }));
 
   return {
     nodes: graphNodes,
-    edges: graphEdges
+    edges: graphEdges,
   };
 };

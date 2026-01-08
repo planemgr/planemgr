@@ -14,8 +14,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",
-    "lint": "echo 'no lint configured'",
-    "format": "echo 'no format configured'"
+    "lint": "pnpm -w eslint \"packages/domain/**/*.{ts,tsx}\"",
+    "format": "pnpm -w prettier --write \"packages/domain/**/*.{ts,tsx,md,json}\""
   },
   "dependencies": {
     "zod": "^3.23.8"

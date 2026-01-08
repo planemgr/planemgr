@@ -21,9 +21,9 @@ import {
   type Workspace,
   type WorkspaceUpdateInput,
   type VersionCreateInput,
-  type DriftUpdateInput
+  type DriftUpdateInput,
 } from "@planemgr/domain";
-import type { Storage } from "./storage";
+import type { Storage } from "./storage.js";
 
 // OpenTofu JSON is the source of truth; planemgr.json only holds UI metadata keyed by node id.
 const WORKSPACE_ID = "default";
@@ -135,7 +135,7 @@ const parseNodeDefinitions = (value: unknown): Record<string, PlanemgrNodeDefini
       kind: kindParsed.data,
       label,
       layerId,
-      config: isRecord(entry.config) ? entry.config : undefined
+      config: isRecord(entry.config) ? entry.config : undefined,
     };
   }
   return nodes;
@@ -161,14 +161,13 @@ const parseEdgeDefinitions = (value: unknown): Record<string, PlanemgrEdgeDefini
       kind: kindParsed.data,
       source,
       target,
-      label
+      label,
     };
   }
   return edges;
 };
 
-const sanitizeModuleName = (value: string) =>
-  value.replace(/[^a-zA-Z0-9_]/g, "_");
+const sanitizeModuleName = (value: string) => value.replace(/[^a-zA-Z0-9_]/g, "_");
 
 const resolvePlatformConfig = (node: GraphNode): PlatformConfig => {
   if (!isRecord(node.config)) {
@@ -203,7 +202,7 @@ const buildPlatformModules = (graph: Graph) => {
       source: "./modules/planemgr-ssh-platform",
       host,
       ssh_public_key: "${var.planemgr_ssh_public_key}",
-      ssh_private_key: "${var.planemgr_ssh_private_key}"
+      ssh_private_key: "${var.planemgr_ssh_private_key}",
     };
   }
   return modules;
@@ -233,7 +232,7 @@ const parsePlanemgrTf = (raw: unknown): PlanemgrTfState => {
   return {
     nodes: parseNodeDefinitions(nodesRaw),
     edges: parseEdgeDefinitions(edgesRaw),
-    layers: parseLayers(layersRaw)
+    layers: parseLayers(layersRaw),
   };
 };
 
@@ -245,13 +244,13 @@ const buildTfPayload = (graph: Graph, layers: Layer[]) => {
         const definition: PlanemgrNodeDefinition = {
           kind: node.kind,
           label: node.label,
-          layerId: node.layerId
+          layerId: node.layerId,
         };
         if (node.config && Object.keys(node.config).length > 0) {
           definition.config = node.config;
         }
         return [node.id, definition];
-      })
+      }),
   );
   const edges = Object.fromEntries(
     [...graph.edges]
@@ -260,13 +259,13 @@ const buildTfPayload = (graph: Graph, layers: Layer[]) => {
         const definition: PlanemgrEdgeDefinition = {
           kind: edge.kind,
           source: edge.source,
-          target: edge.target
+          target: edge.target,
         };
         if (edge.label) {
           definition.label = edge.label;
         }
         return [edge.id, definition];
-      })
+      }),
   );
   const modules = buildPlatformModules(graph);
   const payload: Record<string, unknown> = {
@@ -274,20 +273,20 @@ const buildTfPayload = (graph: Graph, layers: Layer[]) => {
       planemgr: {
         nodes,
         edges,
-        layers
-      }
-    }
+        layers,
+      },
+    },
   };
   if (Object.keys(modules).length > 0) {
     payload.module = modules;
     payload.variable = {
       planemgr_ssh_public_key: {
-        type: "string"
+        type: "string",
       },
       planemgr_ssh_private_key: {
         type: "string",
-        sensitive: true
-      }
+        sensitive: true,
+      },
     };
   }
   return payload;
@@ -337,7 +336,7 @@ const parseGitRecord = (record: string): VersionEntry | null => {
     id,
     name,
     notes: notesRaw ? notesRaw : undefined,
-    createdAt: new Date(timestamp * 1000).toISOString()
+    createdAt: new Date(timestamp * 1000).toISOString(),
   };
 };
 
@@ -360,7 +359,7 @@ const isDraftSubject = (subject: string) => subject.trim() === DRAFT_SUBJECT;
 
 const buildWorkspaceGraph = (
   tfState: PlanemgrTfState,
-  metadata: PlanemgrMetadata
+  metadata: PlanemgrMetadata,
 ): { graph: Graph; drift: DriftState; metadata: PlanemgrMetadata; updated: boolean } => {
   const nodesMetadata = isRecord(metadata.nodes) ? { ...metadata.nodes } : {};
   const nodes: GraphNode[] = [];
@@ -374,7 +373,7 @@ const buildWorkspaceGraph = (
     const positionValue = isRecord(metaEntry.position) ? metaEntry.position : null;
     const positionIsValid =
       positionValue && typeof positionValue.x === "number" && typeof positionValue.y === "number";
-    const position = positionIsValid
+    const position: Position = positionIsValid
       ? { x: positionValue.x, y: positionValue.y }
       : lastPosition
         ? { x: lastPosition.x + POSITION_OFFSET.x, y: lastPosition.y + POSITION_OFFSET.y }
@@ -408,7 +407,7 @@ const buildWorkspaceGraph = (
       layerId: definition.layerId,
       position,
       size: definition.kind === "platform" ? size : undefined,
-      config: definition.config
+      config: definition.config,
     });
   }
 
@@ -418,7 +417,7 @@ const buildWorkspaceGraph = (
       kind: definition.kind,
       source: definition.source,
       target: definition.target,
-      label: definition.label
+      label: definition.label,
     });
   }
 
@@ -426,7 +425,7 @@ const buildWorkspaceGraph = (
     graph: { nodes, edges },
     drift,
     metadata: { ...metadata, nodes: nodesMetadata },
-    updated
+    updated,
   };
 };
 
@@ -466,7 +465,7 @@ export class IacStorage implements Storage {
   private isWorkingTreeDirty() {
     const output = this.runGit(
       ["status", "--porcelain", "--", TF_FILENAME, METADATA_FILENAME],
-      true
+      true,
     );
     return Boolean(output?.trim());
   }
@@ -492,10 +491,7 @@ export class IacStorage implements Storage {
   }
 
   private readCommitMetadata(commitId: string): VersionEntry | null {
-    const output = this.runGit(
-      ["show", "-s", `--format=%H%x1f%ct%x1f%s%x1f%b`, commitId],
-      true
-    );
+    const output = this.runGit(["show", "-s", `--format=%H%x1f%ct%x1f%s%x1f%b`, commitId], true);
     if (!output) {
       return null;
     }
@@ -503,10 +499,7 @@ export class IacStorage implements Storage {
   }
 
   private listCommitMetadata(): VersionEntry[] {
-    const output = this.runGit(
-      ["log", `--format=%H%x1f%ct%x1f%s%x1f%b%x1e`],
-      true
-    );
+    const output = this.runGit(["log", `--format=%H%x1f%ct%x1f%s%x1f%b%x1e`], true);
     if (!output) {
       return [];
     }
@@ -521,7 +514,7 @@ export class IacStorage implements Storage {
     try {
       const parsed = JSON.parse(output) as unknown;
       return parsePlanemgrTf(parsed);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -545,8 +538,8 @@ export class IacStorage implements Storage {
 
     const metadata: PlanemgrMetadata = {
       nodes: Object.fromEntries(
-        DEFAULT_GRAPH.nodes.map((node) => [node.id, { position: node.position }])
-      )
+        DEFAULT_GRAPH.nodes.map((node) => [node.id, { position: node.position }]),
+      ),
     };
     await writeJsonFile(this.metadataPath(), metadata);
   }
@@ -571,16 +564,18 @@ export class IacStorage implements Storage {
     const tfState = await this.loadTfState(this.tfPath());
     const layers = tfState.layers.length > 0 ? tfState.layers : DEFAULT_LAYERS;
     const metadata = await this.loadMetadata();
-    const { graph, drift, metadata: merged, updated } = buildWorkspaceGraph(
-      { ...tfState, layers },
-      metadata
-    );
+    const {
+      graph,
+      drift,
+      metadata: merged,
+      updated,
+    } = buildWorkspaceGraph({ ...tfState, layers }, metadata);
     return {
       graph,
       layers,
       drift,
       metadata: merged,
-      metadataUpdated: updated
+      metadataUpdated: updated,
     };
   }
 
@@ -595,7 +590,7 @@ export class IacStorage implements Storage {
       graph,
       layers,
       drift,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
   }
 
@@ -646,7 +641,7 @@ export class IacStorage implements Storage {
         notes: entry.notes,
         graph,
         layers,
-        createdAt: entry.createdAt
+        createdAt: entry.createdAt,
       });
     }
 
@@ -671,7 +666,7 @@ export class IacStorage implements Storage {
       notes: entry.notes,
       graph,
       layers,
-      createdAt: entry.createdAt
+      createdAt: entry.createdAt,
     };
   }
 
@@ -703,18 +698,20 @@ export class IacStorage implements Storage {
       notes: entry.notes,
       graph: workspace.graph,
       layers: workspace.layers,
-      createdAt: entry.createdAt
+      createdAt: entry.createdAt,
     };
   }
 
   async updateDrift(input: DriftUpdateInput): Promise<Workspace> {
     const metadata = await this.loadMetadata();
     const nodesMetadata = isRecord(metadata.nodes) ? { ...metadata.nodes } : {};
-    const metaEntry = isRecord(nodesMetadata[input.nodeId]) ? { ...nodesMetadata[input.nodeId] } : {};
+    const metaEntry = isRecord(nodesMetadata[input.nodeId])
+      ? { ...nodesMetadata[input.nodeId] }
+      : {};
     metaEntry.drift = {
       status: input.status,
       note: input.note,
-      lastCheckedAt: new Date().toISOString()
+      lastCheckedAt: new Date().toISOString(),
     };
     nodesMetadata[input.nodeId] = metaEntry;
     await this.saveMetadata({ ...metadata, nodes: nodesMetadata });
@@ -722,10 +719,7 @@ export class IacStorage implements Storage {
     return this.getWorkspace();
   }
 
-  async checkoutVersion(
-    id: string,
-    options?: { commitDraft?: boolean }
-  ): Promise<Workspace> {
+  async checkoutVersion(id: string, options?: { commitDraft?: boolean }): Promise<Workspace> {
     if (options?.commitDraft ?? true) {
       this.ensureDraftCommit();
     }

@@ -1,8 +1,8 @@
-import { config } from "./config";
-import { createPool } from "./db";
-import { buildServer } from "./server";
-import { createStorage } from "./storage";
-import { ensureIacEnvironment } from "./services/iac";
+import { config } from "./config.js";
+import { createPool } from "./db.js";
+import { buildServer } from "./server.js";
+import { createStorage } from "./storage/index.js";
+import { ensureIacEnvironment } from "./services/iac.js";
 
 const start = async () => {
   await ensureIacEnvironment(config.iacDir);
@@ -13,7 +13,7 @@ const start = async () => {
   try {
     await app.listen({
       port: config.port,
-      host: "0.0.0.0"
+      host: "0.0.0.0",
     });
   } catch (error) {
     app.log.error(error);

@@ -3,7 +3,7 @@ import type {
   PlanVersion,
   Workspace,
   WorkspaceUpdateInput,
-  VersionCreateInput
+  VersionCreateInput,
 } from "@planemgr/domain";
 
 export interface Storage {

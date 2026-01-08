@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { loginInputSchema } from "@planemgr/domain";
-import { config } from "../config";
-import { parseBody } from "../utils/validation";
+import { config } from "../config.js";
+import { parseBody } from "../utils/validation.js";
 import crypto from "crypto";
 
 const constantTimeEqual = (left: string, right: string) => {

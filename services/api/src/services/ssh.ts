@@ -17,10 +17,10 @@ const ensureSshKeyTable = async (pool: Pool) => {
       private_key text not null,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
-    )`
+    )`,
   );
   await pool.query(
-    "create index if not exists user_ssh_keys_updated_at_idx on user_ssh_keys (updated_at)"
+    "create index if not exists user_ssh_keys_updated_at_idx on user_ssh_keys (updated_at)",
   );
 };
 
@@ -31,7 +31,7 @@ const generateEd25519KeyPair = async (username: string): Promise<SshKeyPair> => 
     const result = spawnSync(
       "ssh-keygen",
       ["-t", "ed25519", "-C", username, "-N", "", "-f", keyPath],
-      { stdio: "ignore" }
+      { stdio: "ignore" },
     );
     if (result.error) {
       throw new Error(`ssh-keygen failed: ${result.error.message}`);
@@ -49,11 +49,11 @@ const generateEd25519KeyPair = async (username: string): Promise<SshKeyPair> => 
 
 export const getUserSshKeyPair = async (
   pool: Pool,
-  username: string
+  username: string,
 ): Promise<SshKeyPair | null> => {
   const result = await pool.query(
     "select public_key, private_key from user_ssh_keys where username = $1",
-    [username]
+    [username],
   );
   if (result.rowCount === 0) {
     return null;
@@ -61,14 +61,11 @@ export const getUserSshKeyPair = async (
   const row = result.rows[0] as { public_key: string; private_key: string };
   return {
     publicKey: row.public_key,
-    privateKey: row.private_key
+    privateKey: row.private_key,
   };
 };
 
-export const ensureUserSshKeyPair = async (
-  pool: Pool,
-  username: string
-): Promise<SshKeyPair> => {
+export const ensureUserSshKeyPair = async (pool: Pool, username: string): Promise<SshKeyPair> => {
   await ensureSshKeyTable(pool);
   const existing = await getUserSshKeyPair(pool, username);
   if (existing) {
@@ -82,13 +79,13 @@ export const ensureUserSshKeyPair = async (
      values ($1, $2, $3)
      on conflict (username) do nothing
      returning public_key, private_key`,
-    [username, generated.publicKey, generated.privateKey]
+    [username, generated.publicKey, generated.privateKey],
   );
-  if (insert.rowCount > 0) {
+  if ((insert.rowCount ?? 0) > 0) {
     const row = insert.rows[0] as { public_key: string; private_key: string };
     return {
       publicKey: row.public_key,
-      privateKey: row.private_key
+      privateKey: row.private_key,
     };
   }
   const fallback = await getUserSshKeyPair(pool, username);

@@ -44,10 +44,7 @@ import "reactflow/dist/style.css";
 const LOCAL_DRAFT_ID = "draft-local";
 const DRAFT_COMMIT_NAME = "Draft: workspace";
 
-const nodePaletteByKind: Record<
-  NodeKind,
-  { label: string; description: string }
-> = {
+const nodePaletteByKind: Record<NodeKind, { label: string; description: string }> = {
   platform: {
     label: "Platform",
     description: "PaaS, cluster, or bare metal foundation.",
@@ -91,8 +88,7 @@ const paletteByLayer: Record<string, NodeKind[]> = {
 
 const allPaletteKinds = Object.keys(nodePaletteByKind) as NodeKind[];
 
-const resolvePaletteKinds = (layerId?: string) =>
-  paletteByLayer[layerId ?? ""] ?? allPaletteKinds;
+const resolvePaletteKinds = (layerId?: string) => paletteByLayer[layerId ?? ""] ?? allPaletteKinds;
 
 const layerPresets = [
   {
@@ -142,8 +138,7 @@ const createId = (prefix: string) => {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const isPlatformNode = (node: Node<PlanNodeData>) =>
-  node.data.kind === "platform";
+const isPlatformNode = (node: Node<PlanNodeData>) => node.data.kind === "platform";
 
 const parseNumericStyle = (value: unknown): number | null => {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -157,19 +152,13 @@ const parseNumericStyle = (value: unknown): number | null => {
 };
 
 const resolvePlatformSize = (node: Node<PlanNodeData>) => {
-  const width =
-    parseNumericStyle(node.width ?? node.style?.width) ??
-    DEFAULT_PLATFORM_SIZE.width;
+  const width = parseNumericStyle(node.width ?? node.style?.width) ?? DEFAULT_PLATFORM_SIZE.width;
   const height =
-    parseNumericStyle(node.height ?? node.style?.height) ??
-    DEFAULT_PLATFORM_SIZE.height;
+    parseNumericStyle(node.height ?? node.style?.height) ?? DEFAULT_PLATFORM_SIZE.height;
   return { width, height };
 };
 
-const resolveAbsolutePosition = (
-  node: Node<PlanNodeData>,
-  nodes: Node<PlanNodeData>[],
-) => {
+const resolveAbsolutePosition = (node: Node<PlanNodeData>, nodes: Node<PlanNodeData>[]) => {
   if (node.parentNode) {
     const parent = nodes.find((candidate) => candidate.id === node.parentNode);
     if (parent) {
@@ -184,10 +173,7 @@ const resolveAbsolutePosition = (
 };
 
 // Map a drop position to a platform container so UI grouping matches persisted platform membership.
-const findPlatformAtPosition = (
-  position: XYPosition,
-  nodes: Node<PlanNodeData>[],
-) => {
+const findPlatformAtPosition = (position: XYPosition, nodes: Node<PlanNodeData>[]) => {
   const platforms = nodes.filter(isPlatformNode);
   const matches = platforms.filter((platform) => {
     const platformPosition = resolveAbsolutePosition(platform, nodes);
@@ -219,13 +205,8 @@ const applyLayerVisibility = (
   }));
 };
 
-const applyEdgeVisibility = (
-  edges: Edge[],
-  nodes: Node<PlanNodeData>[],
-): Edge[] => {
-  const hiddenNodes = new Set(
-    nodes.filter((node) => node.hidden).map((node) => node.id),
-  );
+const applyEdgeVisibility = (edges: Edge[], nodes: Node<PlanNodeData>[]): Edge[] => {
+  const hiddenNodes = new Set(nodes.filter((node) => node.hidden).map((node) => node.id));
   return edges.map((edge) => ({
     ...edge,
     hidden: hiddenNodes.has(edge.source) || hiddenNodes.has(edge.target),
@@ -252,13 +233,9 @@ export const WorkspaceView = ({
   const [dirty, setDirty] = useState(false);
   const [versionName, setVersionName] = useState("");
   const [versionNotes, setVersionNotes] = useState("");
-  const [baseVersionId, setBaseVersionId] = useState<string | undefined>(
-    undefined,
-  );
+  const [baseVersionId, setBaseVersionId] = useState<string | undefined>(undefined);
   const [draftCreatedAt, setDraftCreatedAt] = useState<string | null>(null);
-  const [activeLayerId, setActiveLayerId] = useState<string | undefined>(
-    undefined,
-  );
+  const [activeLayerId, setActiveLayerId] = useState<string | undefined>(undefined);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -277,10 +254,7 @@ export const WorkspaceView = ({
   const [nodes, setNodes, onNodesChange] = useNodesState<PlanNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const nodeTypes = useMemo(
-    () => ({ planNode: PlanNode, platformNode: PlatformNode }),
-    [],
-  );
+  const nodeTypes = useMemo(() => ({ planNode: PlanNode, platformNode: PlatformNode }), []);
 
   useEffect(() => {
     activeLayerRef.current = activeLayerId;
@@ -341,10 +315,7 @@ export const WorkspaceView = ({
     [versions, baseVersionId],
   );
 
-  const paletteKinds = useMemo(
-    () => resolvePaletteKinds(activeLayerId),
-    [activeLayerId],
-  );
+  const paletteKinds = useMemo(() => resolvePaletteKinds(activeLayerId), [activeLayerId]);
   const paletteItems = useMemo(
     () =>
       paletteKinds.map((kind) => ({
@@ -355,9 +326,7 @@ export const WorkspaceView = ({
   );
 
   const isActiveDraft =
-    !baseVersionId ||
-    baseVersionId === LOCAL_DRAFT_ID ||
-    activeVersion?.name === DRAFT_COMMIT_NAME;
+    !baseVersionId || baseVersionId === LOCAL_DRAFT_ID || activeVersion?.name === DRAFT_COMMIT_NAME;
   const isReadOnly = !isActiveDraft;
   const isBusy = isBootstrapping || isSwitchingVersion;
   const isEditingLocked = isReadOnly || isBusy;
@@ -486,21 +455,10 @@ export const WorkspaceView = ({
       setLayers(normalizedLayers);
       setDrift(workspace.drift);
       setActiveLayerId(nextActiveLayerId);
-      const flowNodes = graphToFlowNodes(
-        workspace.graph,
-        normalizedLayers,
-        workspace.drift,
-      );
-      const visibleNodes = applyLayerVisibility(
-        flowNodes,
-        normalizedLayers,
-        nextActiveLayerId,
-      );
+      const flowNodes = graphToFlowNodes(workspace.graph, normalizedLayers, workspace.drift);
+      const visibleNodes = applyLayerVisibility(flowNodes, normalizedLayers, nextActiveLayerId);
       const nodesWithActions = attachNodeActions(visibleNodes);
-      const flowEdges = applyEdgeVisibility(
-        graphToFlowEdges(workspace.graph),
-        nodesWithActions,
-      );
+      const flowEdges = applyEdgeVisibility(graphToFlowEdges(workspace.graph), nodesWithActions);
       setNodes(nodesWithActions);
       setEdges(flowEdges);
       setDirtyState(false);
@@ -535,8 +493,8 @@ export const WorkspaceView = ({
     async (options?: { selectId?: string; preserveSelection?: boolean }) => {
       const response = await api.listVersions();
       const defaultId =
-        response.versions.find((version) => version.name === DRAFT_COMMIT_NAME)
-          ?.id ?? response.versions[0]?.id;
+        response.versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id ??
+        response.versions[0]?.id;
       setVersions(response.versions);
       setBaseVersionId((current) => {
         if (options?.selectId) {
@@ -552,10 +510,7 @@ export const WorkspaceView = ({
         if (current === LOCAL_DRAFT_ID) {
           return defaultId ?? current;
         }
-        if (
-          current &&
-          response.versions.some((version) => version.id === current)
-        ) {
+        if (current && response.versions.some((version) => version.id === current)) {
           return current;
         }
         return defaultId ?? current;
@@ -574,27 +529,19 @@ export const WorkspaceView = ({
 
   useEffect(() => {
     if (!dirty && baseVersionId === LOCAL_DRAFT_ID) {
-      const draftId = versions.find(
-        (version) => version.name === DRAFT_COMMIT_NAME,
-      )?.id;
+      const draftId = versions.find((version) => version.name === DRAFT_COMMIT_NAME)?.id;
       setBaseVersionId(draftId ?? versions[0]?.id);
     }
   }, [dirty, baseVersionId, versions]);
 
   useEffect(() => {
-    if (
-      dirty &&
-      !versions.some((version) => version.name === DRAFT_COMMIT_NAME)
-    ) {
+    if (dirty && !versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
       setBaseVersionId((current) => current ?? LOCAL_DRAFT_ID);
     }
   }, [dirty, versions]);
 
   const displayVersions = useMemo(() => {
-    if (
-      !dirty ||
-      versions.some((version) => version.name === DRAFT_COMMIT_NAME)
-    ) {
+    if (!dirty || versions.some((version) => version.name === DRAFT_COMMIT_NAME)) {
       return versions;
     }
     const graph = flowToGraph(nodes, edges);
@@ -676,9 +623,7 @@ export const WorkspaceView = ({
       setActiveLayerId(layerId);
       setNodes((current) => {
         const updatedNodes = applyLayerVisibility(current, layers, layerId);
-        setEdges((currentEdges) =>
-          applyEdgeVisibility(currentEdges, updatedNodes),
-        );
+        setEdges((currentEdges) => applyEdgeVisibility(currentEdges, updatedNodes));
         return updatedNodes;
       });
     },
@@ -703,9 +648,7 @@ export const WorkspaceView = ({
         y: 120 + Math.random() * 200,
       };
       const targetPlatform =
-        kind !== "platform" && position
-          ? findPlatformAtPosition(basePosition, nodes)
-          : undefined;
+        kind !== "platform" && position ? findPlatformAtPosition(basePosition, nodes) : undefined;
       const platformPosition = targetPlatform
         ? resolveAbsolutePosition(targetPlatform, nodes)
         : null;
@@ -716,9 +659,7 @@ export const WorkspaceView = ({
           }
         : basePosition;
       const config =
-        kind === "platform"
-          ? { platformType: "ssh", sshHost: "" }
-          : { provider: "generic" };
+        kind === "platform" ? { platformType: "ssh", sshHost: "" } : { provider: "generic" };
       const nodeId = createId("node");
       const newNode: Node<PlanNodeData> = {
         id: nodeId,
@@ -736,9 +677,7 @@ export const WorkspaceView = ({
             : undefined,
         data: {
           label:
-            kind === "platform"
-              ? "Platform"
-              : `${kind[0].toUpperCase()}${kind.slice(1)}`,
+            kind === "platform" ? "Platform" : `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`,
           kind,
           layerId,
           layerColor: layer?.color ?? "#ffffff",
@@ -807,19 +746,7 @@ export const WorkspaceView = ({
       }
 
       const screenPosition = { x: event.clientX, y: event.clientY };
-      let position: XYPosition;
-
-      if ("screenToFlowPosition" in instance) {
-        position = instance.screenToFlowPosition(screenPosition);
-      } else if (reactFlowWrapper.current) {
-        const bounds = reactFlowWrapper.current.getBoundingClientRect();
-        position = instance.project({
-          x: screenPosition.x - bounds.left,
-          y: screenPosition.y - bounds.top,
-        });
-      } else {
-        position = instance.project(screenPosition);
-      }
+      const position = instance.screenToFlowPosition(screenPosition);
 
       handleAddNode(kind as NodeKind, position);
     },
@@ -846,11 +773,9 @@ export const WorkspaceView = ({
         return;
       }
       setNodes((current) => {
-        const parent = nextParentId
-          ? current.find((node) => node.id === nextParentId)
-          : undefined;
+        const parent = nextParentId ? current.find((node) => node.id === nextParentId) : undefined;
         const parentPosition = parent ? parent.position : null;
-        const updated = current.map((node) => {
+        const updated = current.map((node): Node<PlanNodeData, string | undefined> => {
           if (node.id !== draggedNode.id) {
             return node;
           }
@@ -858,7 +783,7 @@ export const WorkspaceView = ({
             return {
               ...node,
               parentNode: parent.id,
-              extent: "parent",
+              extent: "parent" as const,
               zIndex: 1,
               position: {
                 x: absolutePosition.x - parentPosition.x,
@@ -889,11 +814,7 @@ export const WorkspaceView = ({
 
   const handleCreateVersion = async () => {
     if (isEditingLocked) {
-      setStatus(
-        isReadOnly
-          ? "Check out the draft to save a version."
-          : "Version is loading.",
-      );
+      setStatus(isReadOnly ? "Check out the draft to save a version." : "Version is loading.");
       return;
     }
     if (!versionName.trim()) {
@@ -901,10 +822,7 @@ export const WorkspaceView = ({
       return;
     }
     try {
-      await api.createVersion(
-        versionName.trim(),
-        versionNotes.trim() || undefined,
-      );
+      await api.createVersion(versionName.trim(), versionNotes.trim() || undefined);
       await loadVersions({ preserveSelection: false });
       setVersionName("");
       setVersionNotes("");
@@ -977,9 +895,7 @@ export const WorkspaceView = ({
       <header className="workspace__header">
         <div>
           <div className="workspace__title">Plane Manager</div>
-          <div className="workspace__subtitle">
-            Infrastructure as visualization
-          </div>
+          <div className="workspace__subtitle">Infrastructure as visualization</div>
         </div>
         <div className="workspace__header-actions">
           <div className="profile-menu" ref={profileMenuRef}>
@@ -998,9 +914,7 @@ export const WorkspaceView = ({
                 {profileError ? (
                   <div className="muted">{profileError}</div>
                 ) : profile ? (
-                  <div className="profile-menu__key">
-                    {profile.sshPublicKey}
-                  </div>
+                  <div className="profile-menu__key">{profile.sshPublicKey}</div>
                 ) : (
                   <div className="muted">Generating key...</div>
                 )}
@@ -1014,9 +928,7 @@ export const WorkspaceView = ({
                     Copy key
                   </button>
                 </div>
-                {profileStatus ? (
-                  <div className="profile-menu__status">{profileStatus}</div>
-                ) : null}
+                {profileStatus ? <div className="profile-menu__status">{profileStatus}</div> : null}
               </div>
             ) : null}
           </div>
@@ -1050,9 +962,7 @@ export const WorkspaceView = ({
           </section>
         </aside>
 
-        <main
-          className={`workspace__canvas ${isReadOnly ? "is-readonly" : ""}`}
-        >
+        <main className={`workspace__canvas ${isReadOnly ? "is-readonly" : ""}`}>
           <div
             className="workspace__canvas-body"
             ref={reactFlowWrapper}
@@ -1074,9 +984,7 @@ export const WorkspaceView = ({
               onEdgesChange={handleEdgesChange}
               onConnect={handleConnect}
               onNodeDragStop={handleNodeDragStop}
-              onSelectionChange={(selection) =>
-                setSelectedNodeId(selection.nodes[0]?.id ?? null)
-              }
+              onSelectionChange={(selection) => setSelectedNodeId(selection.nodes[0]?.id ?? null)}
               nodesDraggable={!isEditingLocked}
               nodesConnectable={!isEditingLocked}
               elementsSelectable={!isEditingLocked}
@@ -1093,11 +1001,7 @@ export const WorkspaceView = ({
               <Controls />
             </ReactFlow>
           </div>
-          <div
-            className="layer-tabs"
-            role="tablist"
-            aria-label="Workspace layers"
-          >
+          <div className="layer-tabs" role="tablist" aria-label="Workspace layers">
             {layers
               .slice()
               .sort((left, right) => left.order - right.order)

@@ -1,12 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import {
-  driftUpdateSchema,
-  versionCreateSchema,
-  workspaceUpdateSchema
-} from "@planemgr/domain";
-import { parseBody } from "../utils/validation";
-import { createPlan } from "../services/plan";
-import { requireAuth } from "../utils/auth";
+import { driftUpdateSchema, versionCreateSchema, workspaceUpdateSchema } from "@planemgr/domain";
+import { parseBody } from "../utils/validation.js";
+import { createPlan } from "../services/plan.js";
+import { requireAuth } from "../utils/auth.js";
 
 export const registerWorkspaceRoutes = async (app: FastifyInstance) => {
   app.get("/api/health", async () => ({ status: "ok" }));
@@ -60,7 +56,7 @@ export const registerWorkspaceRoutes = async (app: FastifyInstance) => {
     try {
       const body = request.body as { commitDraft?: boolean } | undefined;
       const workspace = await app.storage.checkoutVersion(id, {
-        commitDraft: body?.commitDraft
+        commitDraft: body?.commitDraft,
       });
       reply.send(workspace);
     } catch (error) {
@@ -99,7 +95,7 @@ export const registerWorkspaceRoutes = async (app: FastifyInstance) => {
       workspace.id,
       workspace.graph,
       baseVersion?.graph ?? null,
-      baseVersion?.id
+      baseVersion?.id,
     );
 
     reply.send(plan);

@@ -8,8 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate": "tsx src/migrate.ts",
-    "lint": "echo 'no lint configured'",
-    "format": "echo 'no format configured'"
+    "lint": "pnpm -w eslint \"services/api/**/*.{ts,tsx}\"",
+    "format": "pnpm -w prettier --write \"services/api/**/*.{ts,tsx,md,json}\""
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
@@ -23,7 +23,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
+    "@types/pg": "^8.11.7",
+    "@types/uuid": "^9.0.8",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "zod": "^3.23.8"
   }
 }

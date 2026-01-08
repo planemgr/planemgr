@@ -37,5 +37,5 @@ export const config = {
   databaseUrl,
   port,
   iacDir,
-  corsOrigins
+  corsOrigins,
 };

@@ -8,13 +8,13 @@ export const nodeKindSchema = z.enum([
   "storage",
   "control",
   "data",
-  "security"
+  "security",
 ]);
 export type NodeKind = z.infer<typeof nodeKindSchema>;
 
 export const nodeSizeSchema = z.object({
   width: z.number(),
-  height: z.number()
+  height: z.number(),
 });
 export type NodeSize = z.infer<typeof nodeSizeSchema>;
 
@@ -23,7 +23,7 @@ export type EdgeKind = z.infer<typeof edgeKindSchema>;
 
 export const positionSchema = z.object({
   x: z.number(),
-  y: z.number()
+  y: z.number(),
 });
 export type Position = z.infer<typeof positionSchema>;
 
@@ -34,7 +34,7 @@ export const graphNodeSchema = z.object({
   layerId: z.string().min(1),
   position: positionSchema,
   size: nodeSizeSchema.optional(),
-  config: z.record(z.unknown()).optional()
+  config: z.record(z.unknown()).optional(),
 });
 export type GraphNode = z.infer<typeof graphNodeSchema>;
 
@@ -43,13 +43,13 @@ export const graphEdgeSchema = z.object({
   kind: edgeKindSchema,
   source: z.string().min(1),
   target: z.string().min(1),
-  label: z.string().optional()
+  label: z.string().optional(),
 });
 export type GraphEdge = z.infer<typeof graphEdgeSchema>;
 
 export const graphSchema = z.object({
   nodes: z.array(graphNodeSchema),
-  edges: z.array(graphEdgeSchema)
+  edges: z.array(graphEdgeSchema),
 });
 export type Graph = z.infer<typeof graphSchema>;
 
@@ -58,7 +58,7 @@ export const layerSchema = z.object({
   name: z.string().min(1),
   color: z.string().min(1),
   visible: z.boolean(),
-  order: z.number().int()
+  order: z.number().int(),
 });
 export type Layer = z.infer<typeof layerSchema>;
 
@@ -68,7 +68,7 @@ export type DriftStatus = z.infer<typeof driftStatusSchema>;
 export const driftItemSchema = z.object({
   status: driftStatusSchema,
   lastCheckedAt: z.string().optional(),
-  note: z.string().optional()
+  note: z.string().optional(),
 });
 export type DriftItem = z.infer<typeof driftItemSchema>;
 
@@ -81,7 +81,7 @@ export const workspaceSchema = z.object({
   graph: graphSchema,
   layers: z.array(layerSchema),
   drift: driftStateSchema,
-  updatedAt: z.string()
+  updatedAt: z.string(),
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
 
@@ -97,7 +97,7 @@ export const planOperationSchema = z.object({
   target: planTargetSchema,
   targetId: z.string().min(1),
   summary: z.string().min(1),
-  changes: z.record(z.unknown()).optional()
+  changes: z.record(z.unknown()).optional(),
 });
 export type PlanOperation = z.infer<typeof planOperationSchema>;
 
@@ -109,8 +109,8 @@ export const planSchema = z.object({
   stats: z.object({
     adds: z.number().int(),
     updates: z.number().int(),
-    deletes: z.number().int()
-  })
+    deletes: z.number().int(),
+  }),
 });
 export type Plan = z.infer<typeof planSchema>;
 
@@ -121,41 +121,41 @@ export const planVersionSchema = z.object({
   notes: z.string().optional(),
   graph: graphSchema,
   layers: z.array(layerSchema),
-  createdAt: z.string().min(1)
+  createdAt: z.string().min(1),
 });
 export type PlanVersion = z.infer<typeof planVersionSchema>;
 
 export const sessionUserSchema = z.object({
-  username: z.string().min(1)
+  username: z.string().min(1),
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 export const userProfileSchema = z.object({
   username: z.string().min(1),
-  sshPublicKey: z.string().min(1)
+  sshPublicKey: z.string().min(1),
 });
 export type UserProfile = z.infer<typeof userProfileSchema>;
 
 export const loginInputSchema = z.object({
   username: z.string().min(1),
-  password: z.string().min(1)
+  password: z.string().min(1),
 });
 
 export const workspaceUpdateSchema = z.object({
   graph: graphSchema,
   layers: z.array(layerSchema),
-  drift: driftStateSchema.optional()
+  drift: driftStateSchema.optional(),
 });
 
 export const versionCreateSchema = z.object({
   name: z.string().min(1),
-  notes: z.string().optional()
+  notes: z.string().optional(),
 });
 
 export const driftUpdateSchema = z.object({
   nodeId: z.string().min(1),
   status: driftStatusSchema,
-  note: z.string().optional()
+  note: z.string().optional(),
 });
 
 export type WorkspaceUpdateInput = z.infer<typeof workspaceUpdateSchema>;
@@ -166,7 +166,7 @@ export const DEFAULT_LAYERS: Layer[] = [
   { id: "physical", name: "Physical", color: "#f2c879", visible: true, order: 1 },
   { id: "infra", name: "Infrastructure", color: "#ffb454", visible: true, order: 2 },
   { id: "control", name: "Control", color: "#7cc4ff", visible: true, order: 3 },
-  { id: "service", name: "Services", color: "#f37cc1", visible: true, order: 4 }
+  { id: "service", name: "Services", color: "#f37cc1", visible: true, order: 4 },
 ];
 
 export const DEFAULT_GRAPH: Graph = {
@@ -177,7 +177,7 @@ export const DEFAULT_GRAPH: Graph = {
       label: "Compute",
       layerId: "infra",
       position: { x: 120, y: 160 },
-      config: { provider: "generic" }
+      config: { provider: "generic" },
     },
     {
       id: "node-service-1",
@@ -185,8 +185,8 @@ export const DEFAULT_GRAPH: Graph = {
       label: "Core Service",
       layerId: "service",
       position: { x: 420, y: 260 },
-      config: { replicas: 2 }
-    }
+      config: { replicas: 2 },
+    },
   ],
   edges: [
     {
@@ -194,9 +194,9 @@ export const DEFAULT_GRAPH: Graph = {
       kind: "data",
       source: "node-compute-1",
       target: "node-service-1",
-      label: "deploys"
-    }
-  ]
+      label: "deploys",
+    },
+  ],
 };
 
 export const EMPTY_DRIFT: DriftState = {};

@@ -7,8 +7,8 @@
     "dev": "vite --host",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
-    "lint": "echo 'no lint configured'",
-    "format": "echo 'no format configured'"
+    "lint": "pnpm -w eslint \"apps/web/**/*.{ts,tsx}\"",
+    "format": "pnpm -w prettier --write \"apps/web/**/*.{ts,tsx,css,md,json}\""
   },
   "dependencies": {
     "@planemgr/domain": "workspace:*",

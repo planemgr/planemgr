@@ -5,7 +5,7 @@ import type {
   SessionUser,
   UserProfile,
   Workspace,
-  WorkspaceUpdateInput
+  WorkspaceUpdateInput,
 } from "@planemgr/domain";
 
 const baseUrl = import.meta.env.VITE_API_URL ?? "";
@@ -16,9 +16,9 @@ const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
     credentials: "include",
     headers: {
       ...(hasBody ? { "Content-Type": "application/json" } : {}),
-      ...(options?.headers ?? {})
+      ...(options?.headers ?? {}),
     },
-    ...options
+    ...options,
   });
 
   if (!response.ok) {
@@ -34,7 +34,7 @@ export const api = {
   login: (username: string, password: string) =>
     request<{ user: SessionUser }>("/api/session", {
       method: "POST",
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
     }),
   logout: () => request<{ ok: boolean }>("/api/session", { method: "DELETE" }),
   getProfile: () => request<UserProfile>("/api/profile"),
@@ -45,23 +45,21 @@ export const api = {
   createVersion: (name: string, notes?: string) =>
     request<PlanVersion>("/api/versions", {
       method: "POST",
-      body: JSON.stringify({ name, notes })
+      body: JSON.stringify({ name, notes }),
     }),
   checkoutVersion: (id: string, commitDraft?: boolean) =>
     request<Workspace>(`/api/versions/${id}/checkout`, {
       method: "POST",
-      ...(commitDraft !== undefined
-        ? { body: JSON.stringify({ commitDraft }) }
-        : {})
+      ...(commitDraft !== undefined ? { body: JSON.stringify({ commitDraft }) } : {}),
     }),
   createPlan: (baseVersionId?: string) =>
     request<Plan>("/api/plan", {
       method: "POST",
-      body: JSON.stringify({ baseVersionId })
+      body: JSON.stringify({ baseVersionId }),
     }),
   updateDrift: (payload: DriftUpdateInput) =>
     request<Workspace>("/api/drift", {
       method: "PATCH",
-      body: JSON.stringify(payload)
-    })
+      body: JSON.stringify(payload),
+    }),
 };
