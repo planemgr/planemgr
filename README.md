@@ -1,6 +1,7 @@
 # Plane Manager
 
-Visual infrastructure manager. Build, layer, and verify infrastructure changes using a visual canvas that compiles into execution plans.
+Visual infrastructure manager. Build, layer, and verify infrastructure changes
+using a visual canvas that compiles into execution plans.
 
 ## Quick start
 
@@ -14,6 +15,12 @@ Visual infrastructure manager. Build, layer, and verify infrastructure changes u
 Web: `http://localhost:5173`
 API: `http://localhost:4000`
 
+## Technical Details
+
+- Uses OpenTofu to provision infrastructure (with config in JSON format)
+- Stores and manages the OpenTofu config in Git
+- Has a plugin architecture for various infrastructure elements
+
 ## Structure
 
 - `apps/web` - React + Vite UI with React Flow canvas.
@@ -21,6 +28,10 @@ API: `http://localhost:4000`
 - `packages/domain` - Shared types and schemas.
 - `docs` - Architecture, ADRs, and roadmap.
 - `deploy/helm/planemgr` - Helm chart scaffolding.
+
+## Roadmap
+
+- [ ] Installer
 
 ## Notes
 

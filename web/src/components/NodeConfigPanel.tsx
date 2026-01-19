@@ -1,6 +1,6 @@
 import type { ChangeEvent } from "react";
 import type { Node } from "reactflow";
-import type { NodeKind } from "@planemgr/domain";
+import type { NodeKind } from "../domain";
 import type { PlanNodeData } from "../graph";
 
 type PlatformType = "ssh";

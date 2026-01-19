@@ -20,14 +20,7 @@ import ReactFlow, {
   type Node,
   type XYPosition,
 } from "reactflow";
-import type {
-  DriftState,
-  Layer,
-  NodeKind,
-  PlanVersion,
-  UserProfile,
-  Workspace,
-} from "@planemgr/domain";
+import type { DriftState, Layer, NodeKind, PlanVersion, UserProfile, Workspace } from "../domain";
 import { api } from "../api";
 import {
   flowToGraph,

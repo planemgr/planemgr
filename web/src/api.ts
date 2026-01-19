@@ -6,7 +6,7 @@ import type {
   UserProfile,
   Workspace,
   WorkspaceUpdateInput,
-} from "@planemgr/domain";
+} from "./domain";
 
 const baseUrl = import.meta.env.VITE_API_URL ?? "";
 

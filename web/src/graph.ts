@@ -8,7 +8,7 @@ import type {
   Layer,
   NodeKind,
   NodeSize,
-} from "@planemgr/domain";
+} from "./domain";
 import type { Edge, Node } from "reactflow";
 
 export type PlanNodeData = {

@@ -1,0 +1,54 @@
+version: "3"
+
+tasks:
+  deps:
+    desc: Install backend and frontend dependencies
+    deps:
+      - deps:backend
+      - deps:frontend
+  deps:backend:
+    desc: Install backend Go dependencies
+    cmds:
+      - go mod download
+  deps:frontend:
+    desc: Install frontend dependencies
+    dir: web
+    cmds:
+      - corepack enable pnpm
+      - pnpm install
+  deps:air:
+    desc: Install air for backend reloads
+    cmds:
+      - go install github.com/air-verse/air@latest
+  build:web:
+    desc: Build frontend assets
+    deps:
+      - deps:frontend
+    dir: web
+    cmds:
+      - pnpm build
+  build:
+    desc: Build embeddedFS production binary
+    deps:
+      - deps:backend
+      - build:web
+    cmds:
+      - go build -tags embedfs -o build/planemgr ./cmd/server
+  dev:
+    desc: Install dependencies and start dev servers
+    deps:
+      - deps
+    cmds:
+      - cmd: task -p dev:backend dev:frontend
+  dev:backend:
+    desc: Start backend dev server
+    deps:
+      - deps:backend
+      - deps:air
+    cmds:
+      - air -root . -build.cmd="go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules"
+  dev:frontend:
+    desc: Start frontend dev server
+    dir: web
+    cmds:
+      - pnpm dev
