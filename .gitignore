@@ -12,3 +12,4 @@ pnpm-lock.yaml
 /internal/server/static
 /internal/server/docs/swagger.json
 /internal/server/docs/swagger.yaml
+/srv

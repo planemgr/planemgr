@@ -15,6 +15,8 @@ API: `http://localhost:4000`
 API Docs: `http://localhost:4000/api/doc`
 OpenAPI JSON: `http://localhost:4000/api/openapi.json`
 
+Chart repos are stored as bare git repos in `WORKDIR` (default `./srv`).
+
 To build a production binary that serves the Vite bundle:
 - `task build`
 
