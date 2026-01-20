@@ -6,16 +6,17 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 
 ## Structure
 
-- `apps/web` - React + Vite UI with React Flow canvas.
-- `services/api` - Fastify API, session auth, plan diff engine, file-backed IaC storage.
+- `web` - React + Vite UI with React Flow canvas.
+- `cmd/server` + `internal/server` - Go HTTP API, session auth, plan diff engine, file-backed IaC storage.
 - `packages/domain` - Shared types and schemas.
 - `docs` - Architecture, ADRs, and roadmap.
 - `deploy/helm/planemgr` - Helm chart scaffolding.
 
 ## Components
 
-- Web UI (`apps/web`): React + React Flow canvas with planes, nodes, edges, plan preview, and drift controls.
-- API (`services/api`): Fastify service that manages sessions, workspace state, versions, and plan generation.
+- Web UI (`web`): React + React Flow canvas with planes, nodes, edges, plan preview, and drift controls.
+- API (`cmd/server` + `internal/server`): Go HTTP service that manages sessions, workspace state, versions, and plan generation.
+- API docs: OpenAPI/Swagger generated via `swag` and served at `/api/openapi.json` and `/api/doc`.
 - Domain package (`packages/domain`): Shared schemas and types for graphs, layers, plans, and drift.
 - Storage (Git + filesystem): OpenTofu JSON and metadata tracked in a git repo.
 
@@ -47,7 +48,7 @@ Drift is stored as a per-node status map. The UI surfaces drift and provides res
 
 ## Deployment
 
-- Two services: `web` (static assets) and `api` (Fastify).
+- Single Go service serving API routes and embedded frontend assets.
 - Helm chart scaffolding in `deploy/helm/planemgr`.
 
 ## Notes

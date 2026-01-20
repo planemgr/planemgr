@@ -5,6 +5,10 @@ node_modules
 .env.*.local
 pnpm-lock.yaml
 .pnpm-store
+/tmp
+/build
 /dist
-/apps/web/dist
-/services/api/dist
+/web/dist
+/internal/server/static
+/internal/server/docs/swagger.json
+/internal/server/docs/swagger.yaml

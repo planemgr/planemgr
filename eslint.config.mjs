@@ -42,7 +42,7 @@ export default [
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}"],
+    files: ["web/**/*.{ts,tsx}"],
     languageOptions: {
       globals: browserGlobals,
     },
@@ -64,7 +64,7 @@ export default [
     },
   },
   {
-    files: ["services/api/**/*.{ts,tsx}", "packages/domain/**/*.{ts,tsx}"],
+    files: ["packages/domain/**/*.{ts,tsx}"],
     languageOptions: {
       globals: nodeGlobals,
     },

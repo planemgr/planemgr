@@ -6,13 +6,16 @@ import (
 	"os"
 	"time"
 
+	// Keep swag tool dependencies in the module for docs generation.
+	_ "golang.org/x/text/unicode/bidi"
+
 	"github.com/mtolmacs/planemgr/internal/server"
 )
 
 func main() {
-	port := os.Getenv("PORT")
+	port := os.Getenv("API_PORT")
 	if port == "" {
-		port = "8080"
+		port = "4000"
 	}
 
 	srv := &http.Server{

@@ -7,13 +7,19 @@ using a visual canvas that compiles into execution plans.
 
 1. Copy env defaults:
    - `cp .env.example .env`
-2. Install dependencies:
-   - `pnpm install`
-3. Start dev servers:
-   - `docker compose up` or `pnpm dev`
+2. Start dev servers:
+   - `task dev`
 
 Web: `http://localhost:5173`
 API: `http://localhost:4000`
+API Docs: `http://localhost:4000/api/doc`
+OpenAPI JSON: `http://localhost:4000/api/openapi.json`
+
+To build a production binary that serves the Vite bundle:
+- `task build`
+
+To regenerate OpenAPI docs manually:
+- `task docs:api`
 
 ## Technical Details
 
@@ -23,8 +29,8 @@ API: `http://localhost:4000`
 
 ## Structure
 
-- `apps/web` - React + Vite UI with React Flow canvas.
-- `services/api` - Fastify API, session auth, plan diff engine, OpenTofu git-backed storage.
+- `web` - React + Vite UI with React Flow canvas.
+- `cmd/server` + `internal/server` - Go HTTP API and static asset server.
 - `packages/domain` - Shared types and schemas.
 - `docs` - Architecture, ADRs, and roadmap.
 - `deploy/helm/planemgr` - Helm chart scaffolding.

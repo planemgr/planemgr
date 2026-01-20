@@ -20,6 +20,12 @@ tasks:
     desc: Install air for backend reloads
     cmds:
       - go install github.com/air-verse/air@latest
+  docs:api:
+    desc: Generate OpenAPI docs with swag
+    deps:
+      - deps:backend
+    cmds:
+      - go run github.com/swaggo/swag/cmd/swag@v1.16.3 init -g docs.go -o ../internal/server/docs --dir cmd/server,internal/server --parseDependency --parseInternal
   build:web:
     desc: Build frontend assets
     deps:
@@ -27,28 +33,32 @@ tasks:
     dir: web
     cmds:
       - pnpm build
+      - rm -rf ../internal/server/static
+      - mkdir -p ../internal/server/static
+      - cp -R dist/. ../internal/server/static/
   build:
     desc: Build embeddedFS production binary
     deps:
       - deps:backend
       - build:web
+      - docs:api
     cmds:
       - go build -tags embedfs -o build/planemgr ./cmd/server
-  dev:
-    desc: Install dependencies and start dev servers
-    deps:
-      - deps
-    cmds:
-      - cmd: task -p dev:backend dev:frontend
   dev:backend:
     desc: Start backend dev server
     deps:
       - deps:backend
       - deps:air
     cmds:
-      - air -root . -build.cmd="go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules"
+      - air -root . -build.cmd="task docs:api && go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules"
   dev:frontend:
     desc: Start frontend dev server
     dir: web
     cmds:
       - pnpm dev
+  dev:
+    desc: Install dependencies and start dev servers
+    deps:
+      - deps
+    cmds:
+      - cmd: task -p dev:backend dev:frontend
