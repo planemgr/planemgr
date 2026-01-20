@@ -15,7 +15,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 ## Components
 
 - Web UI (`web`): React + React Flow canvas with planes, nodes, edges, plan preview, and drift controls.
-- API (`cmd/server` + `internal/server`): Go HTTP service that manages sessions, workspace state, versions, plan generation, and chart file tree listings by git ref.
+- API (`cmd/server` + `internal/server`): Go HTTP service that manages sessions, workspace state, versions, plan generation, and chart file tree/file listings and updates by git ref.
 - API docs: OpenAPI/Swagger generated via `swag` and served at `/api/openapi.json` and `/api/doc`.
 - Domain package (`packages/domain`): Shared schemas and types for graphs, layers, plans, and drift.
 - Storage (Git + filesystem): OpenTofu JSON and metadata tracked in a git repo.
@@ -60,4 +60,4 @@ Drift is stored as a per-node status map. The UI surfaces drift and provides res
 
 # Coding
 
-- Always run `pnpm lint`, `pnpm format` and `pnpm typecheck` after finishing and fix issues to keep the code tidy.
+- If the web/ project is modified, always run `pnpm lint`, `pnpm format` and `pnpm typecheck` after finishing and fix issues to keep the code tidy.

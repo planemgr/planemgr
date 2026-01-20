@@ -16,7 +16,9 @@ API Docs: `http://localhost:4000/api/doc`
 OpenAPI JSON: `http://localhost:4000/api/openapi.json`
 
 Chart repos are stored as bare git repos in `WORKDIR` (default `./srv`).
-Chart file trees can be listed via `GET /api/chart/{id}/tree?ref=...` (defaults to `HEAD`).
+Chart file trees can be listed via `HEAD /api/chart/{id}?ref=...` (defaults to `HEAD`).
+Chart file contents can be read via `GET /api/chart/{id}?file=...&ref=...` (defaults to `HEAD`).
+Chart files can be updated via `PUT /api/chart/{id}` with JSON `{ "message": "...", "files": [{ "path": "...", "content": "..." }] }`.
 
 To build a production binary that serves the Vite bundle:
 - `task build`

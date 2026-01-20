@@ -47,8 +47,78 @@ const docTemplate = `{
                 }
             }
         },
-        "/chart/{id}/tree": {
+        "/chart/{id}": {
             "get": {
+                "description": "Returns the contents of a file in a chart at a ref.",
+                "tags": [
+                    "chart"
+                ],
+                "summary": "Get chart file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chart ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "File path in the chart repo",
+                        "name": "file",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Git ref (defaults to HEAD)",
+                        "name": "ref",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.chartFileResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Writes files to a chart and commits the change.",
+                "tags": [
+                    "chart"
+                ],
+                "summary": "Update chart files",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Chart ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Commit payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.chartCommitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.chartCommitResponse"
+                        }
+                    }
+                }
+            },
+            "head": {
                 "description": "Returns a recursive listing of files for a chart at a ref.",
                 "tags": [
                     "chart"
@@ -98,6 +168,65 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "server.chartCommitRequest": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.chartFileUpdate"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.chartCommitResponse": {
+            "type": "object",
+            "properties": {
+                "chartId": {
+                    "type": "string"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ref": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.chartFileResponse": {
+            "type": "object",
+            "properties": {
+                "chartId": {
+                    "type": "string"
+                },
+                "contents": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.chartFileUpdate": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
         "server.chartListResponse": {
             "type": "object",
             "properties": {
