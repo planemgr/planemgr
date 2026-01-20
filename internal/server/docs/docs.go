@@ -26,7 +26,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_server.chartListResponse"
+                            "$ref": "#/definitions/server.chartListResponse"
                         }
                     }
                 }
@@ -41,19 +41,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_server.chartListResponse"
+                            "$ref": "#/definitions/server.chartResponse"
                         }
                     }
                 }
             }
         },
-        "/chart/{id}": {
+        "/chart/{id}/tree": {
             "get": {
-                "description": "Returns a single chart and its nodes.",
+                "description": "Returns a recursive listing of files for a chart at a ref.",
                 "tags": [
                     "chart"
                 ],
-                "summary": "Get chart",
+                "summary": "List chart files",
                 "parameters": [
                     {
                         "type": "string",
@@ -61,58 +61,19 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Git ref (defaults to HEAD)",
+                        "name": "ref",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_server.chartResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Deletes a chart.",
-                "tags": [
-                    "chart"
-                ],
-                "summary": "Delete chart",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Chart ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    }
-                }
-            },
-            "patch": {
-                "description": "Applies node updates to a chart.",
-                "tags": [
-                    "chart"
-                ],
-                "summary": "Update chart",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Chart ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/internal_server.chartResponse"
+                            "$ref": "#/definitions/server.chartTreeResponse"
                         }
                     }
                 }
@@ -129,7 +90,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_server.healthResponse"
+                            "$ref": "#/definitions/server.healthResponse"
                         }
                     }
                 }
@@ -137,26 +98,43 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "internal_server.chartListResponse": {
+        "server.chartListResponse": {
             "type": "object",
             "properties": {
-                "message": {
+                "chartIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "server.chartResponse": {
+            "type": "object",
+            "properties": {
+                "chartId": {
                     "type": "string"
                 }
             }
         },
-        "internal_server.chartResponse": {
+        "server.chartTreeResponse": {
             "type": "object",
             "properties": {
                 "chartId": {
                     "type": "string"
                 },
-                "message": {
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ref": {
                     "type": "string"
                 }
             }
         },
-        "internal_server.healthResponse": {
+        "server.healthResponse": {
             "type": "object",
             "properties": {
                 "status": {

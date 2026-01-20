@@ -25,7 +25,7 @@ tasks:
     deps:
       - deps:backend
     cmds:
-      - go run github.com/swaggo/swag/cmd/swag@v1.16.3 init -g docs.go -o ../internal/server/docs --dir cmd/server,internal/server --parseDependency --parseInternal
+      - go run github.com/swaggo/swag/cmd/swag@v1.16.3 init -g docs.go -o internal/server/docs --dir cmd/server,internal/server --parseDependency --parseInternal
   build:web:
     desc: Build frontend assets
     deps:
@@ -50,7 +50,7 @@ tasks:
       - deps:backend
       - deps:air
     cmds:
-      - air -root . -build.cmd="task docs:api && go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules"
+      - air -root . -build.cmd="task docs:api && go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules,internal/server/docs"
   dev:frontend:
     desc: Start frontend dev server
     dir: web

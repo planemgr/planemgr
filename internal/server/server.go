@@ -9,7 +9,7 @@ func New() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", handleHealth)
 	mux.HandleFunc("/api/chart", handleChartCollection)
-	mux.HandleFunc("/api/chart/{id}", handleChartEntity)
+	mux.HandleFunc("/api/chart/{id}/tree", handleChartTree)
 	mux.HandleFunc("/api/openapi.json", handleOpenAPI)
 	mux.HandleFunc("/api/docs", handleDocsRedirect)
 	mux.Handle("/api/docs/", handleDocs())
