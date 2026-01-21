@@ -4,10 +4,12 @@ go 1.23.0
 
 require (
 	github.com/go-git/go-git/v5 v5.16.4
+	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/google/uuid v1.6.0
+	github.com/joho/godotenv v1.5.1
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.3
 	golang.org/x/text v0.24.0
-	github.com/google/uuid v1.6.0
 )
 
 require (

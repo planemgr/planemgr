@@ -20,6 +20,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 - Domain package (`packages/domain`): Shared schemas and types for graphs, layers, plans, and drift.
 - Storage (Git + filesystem): OpenTofu JSON and metadata tracked in a git repo.
 - Chart storage: bare git repo per chart stored under `WORKDIR` (default `./srv`).
+- Auth: single-user bearer and refresh tokens signed with `SESSION_SECRET`, credentials from `APP_USERNAME` / `APP_PASSWORD`.
 
 ## Data model
 

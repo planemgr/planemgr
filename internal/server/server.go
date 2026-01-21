@@ -8,6 +8,8 @@ import (
 func New() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", handleHealth)
+	mux.HandleFunc("/api/auth", handleAuth)
+	mux.HandleFunc("/api/user", handleUser)
 	mux.HandleFunc("/api/chart", handleChartCollection)
 	mux.HandleFunc("/api/chart/{id}", handleChartEntity)
 	mux.HandleFunc("/api/openapi.json", handleOpenAPI)

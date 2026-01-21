@@ -22,7 +22,7 @@ var ErrPathIsDirectory = errors.New("chart path is a directory")
 
 type FileUpdate struct {
 	Path    string
-	Content string
+	Content string // Full file content
 }
 
 func chartWorkdir() string {

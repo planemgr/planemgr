@@ -15,15 +15,28 @@ API: `http://localhost:4000`
 API Docs: `http://localhost:4000/api/doc`
 OpenAPI JSON: `http://localhost:4000/api/openapi.json`
 
+## Authentication (single-user)
+
+The API uses bearer tokens signed with `SESSION_SECRET` and a single set of
+credentials (`APP_USERNAME`, `APP_PASSWORD`).
+
+- `POST /api/auth` with JSON `{ "username": "...", "password": "..." }` to obtain
+  access + refresh tokens.
+- `GET /api/auth` with `Authorization: Bearer <refresh_token>` to refresh.
+- `POST /api/user` validates the configured credentials.
+- `GET /api/user` returns `{}` when the bearer access token is valid.
+
 Chart repos are stored as bare git repos in `WORKDIR` (default `./srv`).
 Chart file trees can be listed via `HEAD /api/chart/{id}?ref=...` (defaults to `HEAD`).
 Chart file contents can be read via `GET /api/chart/{id}?file=...&ref=...` (defaults to `HEAD`).
 Chart files can be updated via `PUT /api/chart/{id}` with JSON `{ "message": "...", "files": [{ "path": "...", "content": "..." }] }`.
 
 To build a production binary that serves the Vite bundle:
+
 - `task build`
 
 To regenerate OpenAPI docs manually:
+
 - `task docs:api`
 
 ## Technical Details

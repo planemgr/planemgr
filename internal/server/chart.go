@@ -10,6 +10,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/mtolmacs/planemgr/internal/server/auth"
 	"github.com/mtolmacs/planemgr/internal/server/chart"
 )
 
@@ -52,6 +53,11 @@ type chartCommitRequest struct {
 
 // Handle /api/chart requests.
 func handleChartCollection(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireAccessToken(r); err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		handleChartList(w, r)
@@ -67,6 +73,7 @@ func handleChartCollection(w http.ResponseWriter, r *http.Request) {
 // @Summary List charts
 // @Description Lists all available charts.
 // @Tags chart
+// @Security BearerAuth
 // @Success 200 {object} chartListResponse
 // @Router /chart [get]
 func handleChartList(w http.ResponseWriter, _ *http.Request) {
@@ -85,6 +92,7 @@ func handleChartList(w http.ResponseWriter, _ *http.Request) {
 // @Summary Create chart
 // @Description Creates a new chart.
 // @Tags chart
+// @Security BearerAuth
 // @Success 201 {object} chartResponse
 // @Router /chart [post]
 func handleChartCreate(w http.ResponseWriter, _ *http.Request) {
@@ -101,6 +109,11 @@ func handleChartCreate(w http.ResponseWriter, _ *http.Request) {
 
 // Handle /api/chart/{id} requests.
 func handleChartEntity(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireAccessToken(r); err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
 	switch r.Method {
 	case http.MethodHead:
 		handleChartHead(w, r)
@@ -118,6 +131,7 @@ func handleChartEntity(w http.ResponseWriter, r *http.Request) {
 // @Summary List chart files
 // @Description Returns a recursive listing of files for a chart at a ref.
 // @Tags chart
+// @Security BearerAuth
 // @Param id path string true "Chart ID"
 // @Param ref query string false "Git ref (defaults to HEAD)"
 // @Success 200 {object} chartTreeResponse
@@ -156,6 +170,7 @@ func handleChartHead(w http.ResponseWriter, r *http.Request) {
 // @Summary Get chart file
 // @Description Returns the contents of a file in a chart at a ref.
 // @Tags chart
+// @Security BearerAuth
 // @Param id path string true "Chart ID"
 // @Param file query string true "File path in the chart repo"
 // @Param ref query string false "Git ref (defaults to HEAD)"
@@ -203,9 +218,10 @@ func handleChartFileGet(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handle PUT /api/chart/{id} requests.
-// @Summary Update chart files
+// @Summary Create or replace whole files in chart
 // @Description Writes files to a chart and commits the change.
 // @Tags chart
+// @Security BearerAuth
 // @Param id path string true "Chart ID"
 // @Param request body chartCommitRequest true "Commit payload"
 // @Success 200 {object} chartCommitResponse
