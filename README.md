@@ -56,6 +56,12 @@ To regenerate OpenAPI docs manually:
 
 ## Roadmap
 
+- [ ] Accept SSH key pair from user at POST /api/user or generate key pair
+- [ ] Deploy API endpoint /api/deploy
+  - [ ] Build-gated module to just run opentofu in-process for the installer
+  - [ ] Docker runner
+  - [ ] K8S runner
+- [ ] Sign git commits with the user's SSH key
 - [ ] Installer
 
 ## Notes
