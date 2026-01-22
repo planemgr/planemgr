@@ -7,21 +7,21 @@ import (
 	"github.com/mtolmacs/planemgr/internal/server/auth"
 )
 
-// handleUser godoc
+// HandleUser godoc
 // @Tags user
-func handleUser(w http.ResponseWriter, r *http.Request) {
+func HandleUser(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		handleUserRegister(w, r)
+		HandleUserRegister(w, r)
 	case http.MethodGet:
-		handleUserInfo(w, r)
+		HandleUserInfo(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST")
 		writeJSON(w, http.StatusMethodNotAllowed, errorResponse{Error: "method_not_allowed"})
 	}
 }
 
-// handleUserRegister godoc
+// HandleUserRegister godoc
 // @Summary Set the user name and password
 // @Description Accepts credentials for the single-user setup and validates they match the configured environment.
 // @Tags user
@@ -32,7 +32,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} errorResponse
 // @Failure 401 {object} errorResponse
 // @Router /user [post]
-func handleUserRegister(w http.ResponseWriter, r *http.Request) {
+func HandleUserRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "missing request body"})
 		return
@@ -57,7 +57,7 @@ func handleUserRegister(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, emptyResponse{})
 }
 
-// handleUserInfo godoc
+// HandleUserInfo godoc
 // @Summary Return user info
 // @Description Returns any available user info when the bearer token is valid.
 // @Tags user
@@ -66,7 +66,7 @@ func handleUserRegister(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} emptyResponse
 // @Failure 401 {object} errorResponse
 // @Router /user [get]
-func handleUserInfo(w http.ResponseWriter, r *http.Request) {
+func HandleUserInfo(w http.ResponseWriter, r *http.Request) {
 	if err := auth.RequireAccessToken(r); err != nil {
 		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "unauthorized", Message: err.Error()})
 		return

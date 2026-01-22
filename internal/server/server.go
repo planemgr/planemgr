@@ -7,14 +7,15 @@ import (
 // New wires the API routes and optional static asset handler.
 func New() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/health", handleHealth)
-	mux.HandleFunc("/api/auth", handleAuth)
-	mux.HandleFunc("/api/user", handleUser)
-	mux.HandleFunc("/api/chart", handleChartCollection)
-	mux.HandleFunc("/api/chart/{id}", handleChartEntity)
-	mux.HandleFunc("/api/openapi.json", handleOpenAPI)
-	mux.HandleFunc("/api/docs", handleDocsRedirect)
-	mux.Handle("/api/docs/", handleDocs())
+	mux.HandleFunc("/api/health", HandleHealth)
+	mux.HandleFunc("/api/auth", HandleAuth)
+	mux.HandleFunc("/api/user", HandleUser)
+	mux.HandleFunc("/api/chart", HandleChartCollection)
+	mux.HandleFunc("/api/chart/{id}", HandleChartEntity)
+	mux.HandleFunc("/api/chart/{id}/", HandleChartGit)
+	mux.HandleFunc("/api/openapi.json", HandleOpenAPI)
+	mux.HandleFunc("/api/docs", HandleDocsRedirect)
+	mux.Handle("/api/docs/", HandleDocs())
 	mux.Handle("/api/", http.HandlerFunc(handleApiNotFound))
 
 	if static, ok := staticFS(); ok {

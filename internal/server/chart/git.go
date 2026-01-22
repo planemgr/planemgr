@@ -25,16 +25,21 @@ type FileUpdate struct {
 	Content string // Full file content
 }
 
-func chartWorkdir() string {
-	workdir := os.Getenv("WORKDIR")
-	if workdir == "" {
-		workdir = "./srv"
+func ChartWorkdir() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "."
 	}
-	return workdir
+
+	dir := os.Getenv("WORKDIR")
+	if dir == "" {
+		dir = wd + "/srv"
+	}
+	return dir
 }
 
 func CreateChartRepo() (string, error) {
-	workdir := chartWorkdir()
+	workdir := ChartWorkdir()
 	if err := os.MkdirAll(workdir, 0o755); err != nil {
 		return "", err
 	}
@@ -59,7 +64,7 @@ func CreateChartRepo() (string, error) {
 }
 
 func ListChartRepos() ([]string, error) {
-	workdir := chartWorkdir()
+	workdir := ChartWorkdir()
 	entries, err := os.ReadDir(workdir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -82,7 +87,7 @@ func ListChartRepos() ([]string, error) {
 }
 
 func ListChartTree(chartID, ref string) (string, []string, error) {
-	workdir := chartWorkdir()
+	workdir := ChartWorkdir()
 	repoPath := filepath.Join(workdir, chartID)
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -129,7 +134,7 @@ func ListChartTree(chartID, ref string) (string, []string, error) {
 }
 
 func ReadChartFile(chartID, path, ref string) (string, string, error) {
-	workdir := chartWorkdir()
+	workdir := ChartWorkdir()
 	repoPath := filepath.Join(workdir, chartID)
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -181,7 +186,7 @@ func WriteChartFiles(chartID string, updates []FileUpdate, message string) (stri
 		return "", ErrInvalidPath
 	}
 
-	workdir := chartWorkdir()
+	workdir := ChartWorkdir()
 	repoPath := filepath.Join(workdir, chartID)
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {

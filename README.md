@@ -30,6 +30,7 @@ Chart repos are stored as bare git repos in `WORKDIR` (default `./srv`).
 Chart file trees can be listed via `HEAD /api/chart/{id}?ref=...` (defaults to `HEAD`).
 Chart file contents can be read via `GET /api/chart/{id}?file=...&ref=...` (defaults to `HEAD`).
 Chart files can be updated via `PUT /api/chart/{id}` with JSON `{ "message": "...", "files": [{ "path": "...", "content": "..." }] }`.
+Chart repos can be fetched read-only over smart HTTP at `GET /chart/{id}.git/info/refs?service=git-upload-pack` and `POST /chart/{id}.git/git-upload-pack` with the same access token in the `Authorization` header.
 
 To build a production binary that serves the Vite bundle:
 

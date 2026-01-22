@@ -1,15 +1,22 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/format/pktline"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/protocol/packp"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	gitsrv "github.com/go-git/go-git/v5/plumbing/transport/server"
+	"github.com/google/uuid"
 	"github.com/mtolmacs/planemgr/internal/server/auth"
 	"github.com/mtolmacs/planemgr/internal/server/chart"
 )
@@ -52,7 +59,7 @@ type chartCommitRequest struct {
 }
 
 // Handle /api/chart requests.
-func handleChartCollection(w http.ResponseWriter, r *http.Request) {
+func HandleChartCollection(w http.ResponseWriter, r *http.Request) {
 	if err := auth.RequireAccessToken(r); err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
@@ -60,9 +67,9 @@ func handleChartCollection(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		handleChartList(w, r)
+		HandleChartList(w, r)
 	case http.MethodPost:
-		handleChartCreate(w, r)
+		HandleChartCreate(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST")
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
@@ -76,7 +83,7 @@ func handleChartCollection(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Success 200 {object} chartListResponse
 // @Router /chart [get]
-func handleChartList(w http.ResponseWriter, _ *http.Request) {
+func HandleChartList(w http.ResponseWriter, _ *http.Request) {
 	charts, err := chart.ListChartRepos()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to list charts"})
@@ -95,10 +102,21 @@ func handleChartList(w http.ResponseWriter, _ *http.Request) {
 // @Security BearerAuth
 // @Success 201 {object} chartResponse
 // @Router /chart [post]
-func handleChartCreate(w http.ResponseWriter, _ *http.Request) {
+func HandleChartCreate(w http.ResponseWriter, _ *http.Request) {
 	chartID, err := chart.CreateChartRepo()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create chart"})
+		return
+	}
+
+	_, err = chart.WriteChartFiles(chartID, []chart.FileUpdate{
+		{
+			Path:    "main.tf.json",
+			Content: "{}",
+		},
+	}, "Initialization")
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to initialize chart"})
 		return
 	}
 
@@ -108,7 +126,7 @@ func handleChartCreate(w http.ResponseWriter, _ *http.Request) {
 }
 
 // Handle /api/chart/{id} requests.
-func handleChartEntity(w http.ResponseWriter, r *http.Request) {
+func HandleChartEntity(w http.ResponseWriter, r *http.Request) {
 	if err := auth.RequireAccessToken(r); err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
@@ -116,11 +134,11 @@ func handleChartEntity(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodHead:
-		handleChartHead(w, r)
+		HandleChartHead(w, r)
 	case http.MethodGet:
-		handleChartFileGet(w, r)
+		HandleChartFileGet(w, r)
 	case http.MethodPut:
-		handleChartPut(w, r)
+		HandleChartPut(w, r)
 	default:
 		w.Header().Set("Allow", "HEAD, GET, PUT")
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
@@ -136,7 +154,7 @@ func handleChartEntity(w http.ResponseWriter, r *http.Request) {
 // @Param ref query string false "Git ref (defaults to HEAD)"
 // @Success 200 {object} chartTreeResponse
 // @Router /chart/{id} [head]
-func handleChartHead(w http.ResponseWriter, r *http.Request) {
+func HandleChartHead(w http.ResponseWriter, r *http.Request) {
 	chartID := r.PathValue("id")
 	if chartID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "chart id required"})
@@ -176,7 +194,7 @@ func handleChartHead(w http.ResponseWriter, r *http.Request) {
 // @Param ref query string false "Git ref (defaults to HEAD)"
 // @Success 200 {object} chartFileResponse
 // @Router /chart/{id} [get]
-func handleChartFileGet(w http.ResponseWriter, r *http.Request) {
+func HandleChartFileGet(w http.ResponseWriter, r *http.Request) {
 	chartID := r.PathValue("id")
 	if chartID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "chart id required"})
@@ -226,7 +244,7 @@ func handleChartFileGet(w http.ResponseWriter, r *http.Request) {
 // @Param request body chartCommitRequest true "Commit payload"
 // @Success 200 {object} chartCommitResponse
 // @Router /chart/{id} [put]
-func handleChartPut(w http.ResponseWriter, r *http.Request) {
+func HandleChartPut(w http.ResponseWriter, r *http.Request) {
 	chartID := r.PathValue("id")
 	if chartID == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "chart id required"})
@@ -283,4 +301,136 @@ func handleChartPut(w http.ResponseWriter, r *http.Request) {
 		Ref:     commitRef,
 		Files:   paths,
 	})
+}
+
+// HandleChartGit serves a read-only smart HTTP git endpoint for chart repos.
+func HandleChartGit(w http.ResponseWriter, r *http.Request) {
+	if err := auth.RequireAccessTokenFromBasicAuth(r, "access"); err != nil {
+		w.Header().Set("WWW-Authenticate", `Basic realm="planemgr"`)
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	chartID := r.PathValue("id")
+	if chartID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "chart id required"})
+		return
+	}
+
+	trimmedChartID := strings.TrimSuffix(chartID, ".git")
+	if _, err := uuid.Parse(trimmedChartID); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chart id"})
+		return
+	}
+
+	basePath := "/api/chart/" + chartID
+	suffix := strings.TrimPrefix(r.URL.Path, basePath)
+	switch suffix {
+	case "", "/":
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "git endpoint requires a service path"})
+	case "/info/refs":
+		handleChartGitInfoRefs(w, r, trimmedChartID)
+	case "/git-upload-pack":
+		handleChartGitUploadPack(w, r, trimmedChartID)
+	case "/git-receive-pack":
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "pushes are disabled"})
+	default:
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "unknown git endpoint"})
+	}
+}
+
+func handleChartGitInfoRefs(w http.ResponseWriter, r *http.Request, chartID string) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	service := r.URL.Query().Get("service")
+	if service == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "service required"})
+		return
+	}
+	if service != transport.UploadPackServiceName {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "service not supported"})
+		return
+	}
+
+	session, err := chartUploadPackSession(chartID)
+	if err != nil {
+		handleChartGitSessionError(w, err)
+		return
+	}
+	defer session.Close()
+
+	advRefs, err := session.AdvertisedReferences()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to advertise refs"})
+		return
+	}
+	advRefs.Prefix = [][]byte{
+		[]byte("# service=git-upload-pack"),
+		pktline.Flush,
+	}
+
+	var buf bytes.Buffer
+	if err := advRefs.Encode(&buf); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to encode refs"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-git-upload-pack-advertisement")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Pragma", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+}
+
+func handleChartGitUploadPack(w http.ResponseWriter, r *http.Request, chartID string) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	session, err := chartUploadPackSession(chartID)
+	if err != nil {
+		handleChartGitSessionError(w, err)
+		return
+	}
+	defer session.Close()
+
+	req := packp.NewUploadPackRequest()
+	if err := req.Decode(r.Body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid upload-pack request"})
+		return
+	}
+
+	resp, err := session.UploadPack(r.Context(), req)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to serve pack"})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-git-upload-pack-result")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Pragma", "no-cache")
+	w.WriteHeader(http.StatusOK)
+	_ = resp.Encode(w)
+}
+
+func chartUploadPackSession(chartID string) (transport.UploadPackSession, error) {
+	dir := osfs.New(chart.ChartWorkdir() + "/" + chartID)
+	loader := gitsrv.NewFilesystemLoader(dir)
+	srv := gitsrv.NewServer(loader)
+	return srv.NewUploadPackSession(&transport.Endpoint{}, nil)
+}
+
+func handleChartGitSessionError(w http.ResponseWriter, err error) {
+	if errors.Is(err, transport.ErrRepositoryNotFound) || errors.Is(err, os.ErrNotExist) {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "chart not found"})
+		return
+	}
+
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to open chart repository"})
 }

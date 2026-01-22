@@ -7,7 +7,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
-func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+func HandleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
@@ -18,12 +18,12 @@ func handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(docs.SwaggerInfo.ReadDoc()))
 }
 
-func handleDocs() http.Handler {
+func HandleDocs() http.Handler {
 	return httpSwagger.Handler(
 		httpSwagger.URL("/api/openapi.json"),
 	)
 }
 
-func handleDocsRedirect(w http.ResponseWriter, r *http.Request) {
+func HandleDocsRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/api/doc/", http.StatusMovedPermanently)
 }

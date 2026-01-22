@@ -26,21 +26,21 @@ type errorResponse struct {
 
 type emptyResponse struct{}
 
-// handleAuth godoc
+// HandleAuth godoc
 // @Tags auth
-func handleAuth(w http.ResponseWriter, r *http.Request) {
+func HandleAuth(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		handleAuthLogin(w, r)
+		HandleAuthLogin(w, r)
 	case http.MethodGet:
-		handleAuthRefresh(w, r)
+		HandleAuthRefresh(w, r)
 	default:
 		w.Header().Set("Allow", "GET, POST")
 		writeJSON(w, http.StatusMethodNotAllowed, errorResponse{Error: "method_not_allowed"})
 	}
 }
 
-// handleAuthLogin godoc
+// HandleAuthLogin godoc
 // @Summary Log in
 // @Description Issues access and refresh tokens using the configured single-user credentials.
 // @Tags auth
@@ -52,7 +52,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Router /auth [post]
-func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
+func HandleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "missing request body"})
 		return
@@ -88,7 +88,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleAuthRefresh godoc
+// HandleAuthRefresh godoc
 // @Summary Refresh access token
 // @Description Issues a new access token using a refresh token in the Authorization header or refresh_token query param.
 // @Tags auth
@@ -98,7 +98,7 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Router /auth [get]
-func handleAuthRefresh(w http.ResponseWriter, r *http.Request) {
+func HandleAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	claims, err := auth.RequireRefreshToken(r)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "unauthorized", Message: err.Error()})

@@ -97,6 +97,23 @@ func RequireAccessToken(r *http.Request) error {
 	return nil
 }
 
+func RequireAccessTokenFromBasicAuth(r *http.Request, expectedUser string) error {
+	user, token, ok := r.BasicAuth()
+	if !ok || user != expectedUser || strings.TrimSpace(token) == "" {
+		return errors.New("missing basic auth token")
+	}
+
+	claims, err := ParseToken(token)
+	if err != nil {
+		return err
+	}
+	if claims.TokenType != "access" {
+		return errors.New("invalid token type")
+	}
+
+	return nil
+}
+
 func RequireRefreshToken(r *http.Request) (*tokenClaims, error) {
 	token := RefreshTokenFromRequest(r)
 	if token == "" {
@@ -117,7 +134,6 @@ func RequireRefreshToken(r *http.Request) (*tokenClaims, error) {
 func bearerToken(r *http.Request) string {
 	value := r.Header.Get("Authorization")
 	if value == "" {
-		println("No Authorization header found")
 		return ""
 	}
 
