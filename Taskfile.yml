@@ -50,7 +50,7 @@ tasks:
       - deps:backend
       - deps:air
     cmds:
-      - air -root . -build.cmd="task docs:api && go build -o build/planemgr-dev ./cmd/server" -build.entrypoint="build/planemgr-dev" -build.exclude_dir="build,tmp,web,node_modules,srv,secure,internal/server/docs"
+      - air
   dev:frontend:
     desc: Start frontend dev server
     dir: web
