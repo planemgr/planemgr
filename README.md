@@ -23,8 +23,10 @@ credentials (`APP_USERNAME`, `APP_PASSWORD`).
 - `POST /api/auth` with JSON `{ "username": "...", "password": "..." }` to obtain
   access + refresh tokens.
 - `GET /api/auth` with `Authorization: Bearer <refresh_token>` to refresh.
-- `POST /api/user` validates the configured credentials.
+- `POST /api/user` validates the configured credentials and stores an SSH keypair (provided or generated).
 - `GET /api/user` returns `{}` when the bearer access token is valid.
+
+SSH keys are stored on disk in `SECURE_STORE` (default `./secure`) for provisioning workflows.
 
 Chart repos are stored as bare git repos in `WORKDIR` (default `./srv`).
 Chart file trees can be listed via `HEAD /api/chart/{id}?ref=...` (defaults to `HEAD`).
@@ -56,7 +58,7 @@ To regenerate OpenAPI docs manually:
 
 ## Roadmap
 
-- [ ] Accept SSH key pair from user at POST /api/user or generate key pair
+- [x] Accept SSH key pair from user at POST /api/user or generate key pair
 - [ ] Deploy API endpoint /api/deploy
   - [ ] Build-gated module to just run opentofu in-process for the installer
   - [ ] Docker runner
@@ -70,4 +72,4 @@ To regenerate OpenAPI docs manually:
 - Platform nodes act as resizable containers; child nodes record their platform via `config.platformId`.
 - The plan engine currently diffs graph state; provider adapters will expand it into IaC tool plans.
 - Physical platform nodes can be typed (SSH) with a host IP; OpenTofu uses a local module under `iac/modules/planemgr-ssh-platform` and expects SSH keys via variables.
-- SSH keypairs are generated on demand for the logged-in user and stored in Postgres; the public key is shown in the profile menu and the private key is reserved for provisioning.
+- SSH keypairs are stored on disk under `SECURE_STORE`; the public key is shown in the profile menu and the private key is reserved for provisioning.

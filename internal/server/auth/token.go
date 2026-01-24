@@ -80,21 +80,21 @@ func ParseToken(token string) (*tokenClaims, error) {
 	return claims, nil
 }
 
-func RequireAccessToken(r *http.Request) error {
+func RequireAccessTokenClaims(r *http.Request) (*tokenClaims, error) {
 	token := bearerToken(r)
 	if token == "" {
-		return errors.New("missing bearer token")
+		return nil, errors.New("missing bearer token")
 	}
 
 	claims, err := ParseToken(token)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if claims.TokenType != "access" {
-		return errors.New("invalid token type")
+		return nil, errors.New("invalid token type")
 	}
 
-	return nil
+	return claims, nil
 }
 
 func RequireAccessTokenFromBasicAuth(r *http.Request, expectedUser string) error {

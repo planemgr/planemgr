@@ -60,7 +60,7 @@ type chartCommitRequest struct {
 
 // Handle /api/chart requests.
 func HandleChartCollection(w http.ResponseWriter, r *http.Request) {
-	if err := auth.RequireAccessToken(r); err != nil {
+	if _, err := auth.RequireAccessTokenClaims(r); err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
@@ -127,7 +127,7 @@ func HandleChartCreate(w http.ResponseWriter, _ *http.Request) {
 
 // Handle /api/chart/{id} requests.
 func HandleChartEntity(w http.ResponseWriter, r *http.Request) {
-	if err := auth.RequireAccessToken(r); err != nil {
+	if _, err := auth.RequireAccessTokenClaims(r); err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}

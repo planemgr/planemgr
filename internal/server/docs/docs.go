@@ -301,7 +301,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/server.emptyResponse"
+                            "$ref": "#/definitions/server.userInfoResponse"
                         }
                     },
                     "401": {
@@ -313,7 +313,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Accepts credentials for the single-user setup and validates they match the configured environment.",
+                "description": "Accepts credentials for the single-user setup, optionally storing an SSH keypair or generating one.",
                 "consumes": [
                     "application/json"
                 ],
@@ -331,7 +331,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/server.authRequest"
+                            "$ref": "#/definitions/server.userRegisterRequest"
                         }
                     }
                 ],
@@ -350,6 +350,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/server.errorResponse"
                         }
@@ -503,6 +509,31 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.userInfoResponse": {
+            "type": "object",
+            "properties": {
+                "ssh_public_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.userRegisterRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "ssh_private_key": {
+                    "type": "string"
+                },
+                "ssh_public_key": {
+                    "type": "string"
+                },
+                "username": {
                     "type": "string"
                 }
             }

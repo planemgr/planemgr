@@ -1,4 +1,5 @@
 node_modules
+.gomodcache
 .DS_Store
 .env
 .env.local
@@ -13,3 +14,4 @@ pnpm-lock.yaml
 /internal/server/docs/swagger.json
 /internal/server/docs/swagger.yaml
 /srv
+/secure

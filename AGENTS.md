@@ -28,7 +28,7 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 - Plan version: immutable snapshot stored as a git commit.
 - Plan: diff between current workspace and a chosen git version.
 - Platform node: resizable container for PaaS/bare-metal foundations; child nodes store `config.platformId`.
-- User profile: SSH keypair stored in Postgres; UI exposes only the public key while provisioning uses both keys.
+- User profile: SSH keypair stored in `SECURE_STORE` (default `./secure`); UI exposes only the public key while provisioning uses both keys.
 - Platform config: physical platform nodes store `platformType` and SSH host IP; OpenTofu maps SSH platforms to the `planemgr-ssh-platform` module in the IaC repo.
 
 ## Plan pipeline
@@ -62,3 +62,4 @@ Drift is stored as a per-node status map. The UI surfaces drift and provides res
 # Coding
 
 - If the web/ project is modified, always run `pnpm lint`, `pnpm format` and `pnpm typecheck` after finishing and fix issues to keep the code tidy.
+- If the cmd/ or the internal/ Go modules are modified, build the modified code and fix any build errors
