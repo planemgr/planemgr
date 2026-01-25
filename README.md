@@ -34,6 +34,10 @@ Chart file contents can be read via `GET /api/chart/{id}?file=...&ref=...` (defa
 Chart files can be updated via `PUT /api/chart/{id}` with JSON `{ "message": "...", "files": [{ "path": "...", "content": "..." }] }`.
 Chart repos can be fetched read-only over smart HTTP at `GET /chart/{id}.git/info/refs?service=git-upload-pack` and `POST /chart/{id}.git/git-upload-pack` with the same access token in the `Authorization` header.
 
+Deploy runs OpenTofu inside the configured runner container. `POST /api/deploy` with JSON `{ "ref": "..." }`
+checks out the ref in the `IAC_DIR` (defaults to the API working directory), runs `tofu verify`,
+and then `tofu apply` when verification succeeds.
+
 To build a production binary that serves the Vite bundle:
 
 - `task build`
@@ -59,11 +63,12 @@ To regenerate OpenAPI docs manually:
 ## Roadmap
 
 - [x] Accept SSH key pair from user at POST /api/user or generate key pair
-- [ ] Deploy API endpoint /api/deploy
-  - [ ] Build-gated module to just run opentofu in-process for the installer
-  - [ ] Docker runner
+- [x] Deploy API endpoint /api/deploy
+  - [x] Docker runner
   - [ ] K8S runner
 - [ ] Sign git commits with the user's SSH key
+- [ ] Health endpoint should report if service is secure
+- [ ] Tests
 - [ ] Installer
 
 ## Notes
@@ -73,3 +78,4 @@ To regenerate OpenAPI docs manually:
 - The plan engine currently diffs graph state; provider adapters will expand it into IaC tool plans.
 - Physical platform nodes can be typed (SSH) with a host IP; OpenTofu uses a local module under `iac/modules/planemgr-ssh-platform` and expects SSH keys via variables.
 - SSH keypairs are stored on disk under `SECURE_STORE`; the public key is shown in the profile menu and the private key is reserved for provisioning.
+- On API startup, the SUSE BCI runner image is verified with `runner/suse-bci/registry.suse.com.pem`, built, and validated via `tofu -v` (tagged using `RUNNER_IMAGE` or `planemgr/runner:latest`).

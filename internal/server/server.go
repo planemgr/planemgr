@@ -10,6 +10,7 @@ func New() http.Handler {
 	mux.HandleFunc("/api/health", HandleHealth)
 	mux.HandleFunc("/api/auth", HandleAuth)
 	mux.HandleFunc("/api/user", HandleUser)
+	mux.HandleFunc("/api/deploy", HandleDeploy)
 	mux.HandleFunc("/api/chart", HandleChartCollection)
 	mux.HandleFunc("/api/chart/{id}", HandleChartEntity)
 	mux.HandleFunc("/api/chart/{id}/", HandleChartGit)

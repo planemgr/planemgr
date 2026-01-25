@@ -6,6 +6,7 @@ node_modules
 .env.*.local
 pnpm-lock.yaml
 .pnpm-store
+/server
 /tmp
 /build
 /dist
@@ -15,3 +16,4 @@ pnpm-lock.yaml
 /internal/server/docs/swagger.yaml
 /srv
 /secure
+runner/susebci/tmp

@@ -81,7 +81,7 @@ func ParseToken(token string) (*tokenClaims, error) {
 }
 
 func RequireAccessTokenClaims(r *http.Request) (*tokenClaims, error) {
-	token := bearerToken(r)
+	token := BearerToken(r)
 	if token == "" {
 		return nil, errors.New("missing bearer token")
 	}
@@ -131,7 +131,7 @@ func RequireRefreshToken(r *http.Request) (*tokenClaims, error) {
 	return claims, nil
 }
 
-func bearerToken(r *http.Request) string {
+func BearerToken(r *http.Request) string {
 	value := r.Header.Get("Authorization")
 	if value == "" {
 		return ""
@@ -142,7 +142,7 @@ func bearerToken(r *http.Request) string {
 }
 
 func RefreshTokenFromRequest(r *http.Request) string {
-	if token := bearerToken(r); token != "" {
+	if token := BearerToken(r); token != "" {
 		return token
 	}
 

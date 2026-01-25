@@ -12,6 +12,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/mtolmacs/planemgr/internal/server"
+	"github.com/mtolmacs/planemgr/runner/custom"
+	"github.com/mtolmacs/planemgr/runner/susebci"
 )
 
 func main() {
@@ -20,6 +22,18 @@ func main() {
 	port := os.Getenv("API_PORT")
 	if port == "" {
 		port = "4000"
+	}
+
+	// Ensure the runner image is ready.
+	if custom_image := os.Getenv("RUNNER_IMAGE"); custom_image == "" {
+		switch os.Getenv("RUNNER_TYPE") {
+		case "", "susebci":
+			susebci.EnsureRunnerImage()
+		default:
+			log.Fatalf("Unsupported RUNNER_TYPE: %s", os.Getenv("RUNNER_TYPE"))
+		}
+	} else {
+		custom.EnsureRunnerImage()
 	}
 
 	srv := &http.Server{

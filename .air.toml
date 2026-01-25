@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-cmd = "task docs:api && go build -o build/planemgr-dev ./cmd/server"
+cmd = "task docs:api && go build -tags=dev -o build/planemgr-dev ./cmd/server"
 entrypoint = "build/planemgr-dev"
 exclude_dir = ["*", "internal/server/docs"]
 include_dir = ["cmd", "internal"]

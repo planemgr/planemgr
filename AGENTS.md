@@ -15,12 +15,13 @@ Plane Manager provides a visual, layered model of infrastructure that compiles i
 ## Components
 
 - Web UI (`web`): React + React Flow canvas with planes, nodes, edges, plan preview, and drift controls.
-- API (`cmd/server` + `internal/server`): Go HTTP service that manages sessions, workspace state, versions, plan generation, chart file tree/file listings and updates by git ref, and read-only chart git endpoints.
+- API (`cmd/server` + `internal/server`): Go HTTP service that manages sessions, workspace state, versions, plan generation, chart file tree/file listings and updates by git ref, read-only chart git endpoints, and docker-backed deploy runs for a requested git ref.
 - API docs: OpenAPI/Swagger generated via `swag` and served at `/api/openapi.json` and `/api/doc`.
 - Domain package (`packages/domain`): Shared schemas and types for graphs, layers, plans, and drift.
 - Storage (Git + filesystem): OpenTofu JSON and metadata tracked in a git repo.
 - Chart storage: bare git repo per chart stored under `WORKDIR` (default `./srv`).
 - Auth: single-user bearer and refresh tokens signed with `SESSION_SECRET`, credentials from `APP_USERNAME` / `APP_PASSWORD`.
+- Runner (`runner/suse-bci`): Build-time Docker runner that verifies the SUSE BCI base image signature and validates the bundled `tofu` binary on API startup.
 
 ## Data model
 
