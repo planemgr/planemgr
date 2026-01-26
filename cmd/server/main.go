@@ -25,14 +25,10 @@ func main() {
 	}
 
 	// Ensure the runner image is ready.
-	if custom_image := os.Getenv("RUNNER_IMAGE"); custom_image == "" {
-		switch os.Getenv("RUNNER_TYPE") {
-		case "", "susebci":
-			susebci.EnsureRunnerImage()
-		default:
-			log.Fatalf("Unsupported RUNNER_TYPE: %s", os.Getenv("RUNNER_TYPE"))
-		}
-	} else {
+	switch os.Getenv("RUNNER_IMAGE") {
+	case "":
+		susebci.EnsureRunnerImage()
+	default:
 		custom.EnsureRunnerImage()
 	}
 

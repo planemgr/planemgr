@@ -107,19 +107,7 @@ func verifyImageSignature(image, keyPath string) error {
 		return fmt.Errorf("Load cosign public key: %w", err)
 	}
 
-	// rekorClient, err := rekorclient.GetRekorClient(
-	// 	"https://rekor.sigstore.dev",
-	// 	rekorclient.WithUserAgent("planemgr"),
-	// )
-	// if err != nil {
-	// 	return fmt.Errorf("Create rekor client: %w", err)
-	// }
-
 	ctx := context.Background()
-	rekorPubKeys, err := cosign.GetRekorPubs(ctx)
-	if err != nil {
-		return fmt.Errorf("Get rekor public keys: %w", err)
-	}
 
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -127,9 +115,7 @@ func verifyImageSignature(image, keyPath string) error {
 	}
 
 	opts := &cosign.CheckOpts{
-		//RekorClient:  rekorClient,
-		RekorPubKeys: rekorPubKeys,
-		SigVerifier:  verifier,
+		SigVerifier: verifier,
 	}
 	if _, _, err := cosign.VerifyImageSignatures(ctx, ref, opts); err != nil {
 		return fmt.Errorf("Cosign verify failed for %s: %w", image, err)

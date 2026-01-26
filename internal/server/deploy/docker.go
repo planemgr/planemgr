@@ -75,7 +75,7 @@ func RunDockerDeploy(
 		serviceAddress = "host.docker.internal:4000"
 	}
 
-	repo := fmt.Sprintf("http://%s:%s@%s/api/chart/%s.git", subject, token, serviceAddress, id)
+	repo := fmt.Sprintf("http://access:%s@%s/api/chart/%s.git", token, serviceAddress, id)
 
 	config := &container.Config{
 		Image: runnerImage,
@@ -89,12 +89,15 @@ func RunDockerDeploy(
 			"sh",
 			"-c",
 			`git clone "$DEPLOY_REPO" && ` +
+				"cd " + id + " && " +
 				`git switch --detach "$DEPLOY_REF" && ` +
-				`tofu verify && ` +
-				`tofu apply`,
+				"tofu validate --json && " +
+				"tofu apply -auto-approve --json",
 		},
 	}
 	hostConfig := &container.HostConfig{
+		// Use host networking so the runner can reach localhost-bound services.
+		NetworkMode: "host",
 		// Bind mount user SSH keys into the runner's .ssh directory.
 		Mounts: []mount.Mount{
 			{
@@ -163,14 +166,11 @@ func RunDockerDeploy(
 }
 
 func resolveRunnerImage() (string, error) {
-	if customImage := strings.TrimSpace(os.Getenv("RUNNER_IMAGE")); customImage != "" {
-		return customImage, nil
-	}
-
-	switch strings.TrimSpace(os.Getenv("RUNNER_TYPE")) {
-	case "", "susebci":
+	customImage := strings.TrimSpace(os.Getenv("RUNNER_IMAGE"))
+	switch strings.TrimSpace(os.Getenv("RUNNER_IMAGE")) {
+	case "":
 		return "planemgr/runner:latest", nil
 	default:
-		return "", ErrUnsupportedRunner
+		return customImage, nil
 	}
 }
