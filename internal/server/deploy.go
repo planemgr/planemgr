@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/mtolmacs/planemgr/internal/server/auth"
@@ -24,6 +25,29 @@ type deployResponse struct {
 	Output      string `json:"output,omitempty"`
 }
 
+var deployLocks = struct {
+	mu    sync.Mutex
+	locks map[string]struct{}
+}{
+	locks: map[string]struct{}{},
+}
+
+func tryAcquireDeployLock(id string) bool {
+	deployLocks.mu.Lock()
+	defer deployLocks.mu.Unlock()
+	if _, exists := deployLocks.locks[id]; exists {
+		return false
+	}
+	deployLocks.locks[id] = struct{}{}
+	return true
+}
+
+func releaseDeployLock(id string) {
+	deployLocks.mu.Lock()
+	defer deployLocks.mu.Unlock()
+	delete(deployLocks.locks, id)
+}
+
 // HandleDeploy handles /api/deploy requests.
 // @Summary Deploy a ref
 // @Description Runs tofu verify and tofu apply for a git ref using the configured runner image.
@@ -35,6 +59,7 @@ type deployResponse struct {
 // @Success 200 {object} deployResponse
 // @Failure 400 {object} errorResponse
 // @Failure 401 {object} errorResponse
+// @Failure 409 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Router /deploy [post]
 func HandleDeploy(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +100,11 @@ func HandleDeployCreate(w http.ResponseWriter, r *http.Request, subject, private
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chart id"})
 		return
 	}
+	if !tryAcquireDeployLock(req.Id) {
+		writeJSON(w, http.StatusConflict, errorResponse{Error: "deploy_in_progress", Message: "another deploy is already running"})
+		return
+	}
+	defer releaseDeployLock(req.Id)
 
 	token := auth.BearerToken(r)
 	if token == "" {
