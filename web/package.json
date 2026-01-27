@@ -1,5 +1,5 @@
 {
-  "name": "planemgr-web",
+  "name": "@planemgr/planemgr",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "reactflow": "^11.11.4"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",
