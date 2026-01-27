@@ -1,21 +1,29 @@
 # Plane Manager
 
-Visual infrastructure manager. Build, layer, and verify infrastructure changes
-using a visual canvas that compiles into execution plans.
+Visual infrastructure manager. Build, layer, and verify infrastructure using a visual canvas that directly deploy your changes. Aims to be secure by default and easily scalable, supporting home lab deployments as well as popular PaaS providers.
 
-## Quick start
+## Getting started
 
-1. Copy env defaults:
-   - `cp .env.example .env`
-2. Start dev servers:
-   - `task dev`
+At its current stage, 
 
-Web: `http://localhost:5173`
+1. Configure the Planemanager service and tailor it to your needs. The minimal set of environment variables are:
+  - `USERNAME=<the-username-you-log-in`
+
+## Development
+### Quick start
+1. Ensure you have a Docker (or Podman) server running:
+  - `docker info`
+2. Copy env defaults:
+  - `cp .env.example .env`
+3. Start dev servers:
+  - `task dev`
+
+Web: `http://localhost:4001`
 API: `http://localhost:4000`
-API Docs: `http://localhost:4000/api/doc`
+API Docs: `http://localhost:4000/api/docs`
 OpenAPI JSON: `http://localhost:4000/api/openapi.json`
 
-## Authentication (single-user)
+### Authentication (single-user)
 
 The API uses bearer tokens signed with `SESSION_SECRET` and a single set of
 credentials (`APP_USERNAME`, `APP_PASSWORD`).

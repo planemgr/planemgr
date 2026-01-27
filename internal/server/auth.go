@@ -2,9 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"os"
 
 	"github.com/mtolmacs/planemgr/internal/server/auth"
+	"github.com/mtolmacs/planemgr/internal/server/user"
 )
 
 type authRequest struct {
@@ -42,7 +45,7 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 // HandleAuthLogin godoc
 // @Summary Log in
-// @Description Issues access and refresh tokens using the configured single-user credentials.
+// @Description Issues access and refresh tokens by decrypting the stored SSH private key with the provided password.
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -69,11 +72,18 @@ func HandleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !auth.CredentialsMatch(req.Username, req.Password) {
-		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "unauthorized", Message: "invalid credentials"})
+	privateKey, err := user.LoadUserPrivateKey(req.Username, req.Password)
+	if err != nil {
+		status := http.StatusUnauthorized
+		message := "invalid credentials"
+		if errors.Is(err, os.ErrNotExist) {
+			message = "Ssh key pair not found"
+		}
+		writeJSON(w, status, errorResponse{Error: "unauthorized", Message: message})
 		return
 	}
 
+	auth.StorePrivateKey(req.Username, privateKey)
 	accessToken, refreshToken, expiresIn, err := auth.IssueTokens(req.Username)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "token_error", Message: err.Error()})

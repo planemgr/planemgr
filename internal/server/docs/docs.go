@@ -56,7 +56,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Issues access and refresh tokens using the configured single-user credentials.",
+                "description": "Issues access and refresh tokens by decrypting the stored SSH private key with the provided password.",
                 "consumes": [
                     "application/json"
                 ],

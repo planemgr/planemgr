@@ -65,11 +65,6 @@ func HandleUserRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !auth.CredentialsMatch(req.Username, req.Password) {
-		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "unauthorized", Message: "invalid credentials"})
-		return
-	}
-
 	exists, err := user.UserKeyPairExists(req.Username)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "key_lookup_failed", Message: err.Error()})
@@ -99,7 +94,7 @@ func HandleUserRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := user.StoreUserKeyPair(req.Username, publicKey, privateKey); err != nil {
+	if err := user.StoreUserKeyPair(req.Username, publicKey, privateKey, req.Password); err != nil {
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "key_store_failed", Message: err.Error()})
 		return
 	}

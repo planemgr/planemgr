@@ -2,8 +2,11 @@ package user
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -12,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -61,7 +65,7 @@ func ValidateSSHKeyPair(publicKey, privateKey string) error {
 	return nil
 }
 
-func StoreUserKeyPair(username, publicKey, privateKey string) error {
+func StoreUserKeyPair(username, publicKey, privateKey, password string) error {
 	// Persist SSH keys under SECURE_STORE/<username> with locked-down permissions.
 	storeDir := secureStoreDir()
 	if err := ensureSecureDir(storeDir); err != nil {
@@ -77,8 +81,13 @@ func StoreUserKeyPair(username, publicKey, privateKey string) error {
 		return err
 	}
 
+	encryptedPrivateKey, err := EncryptPrivateKey(password, privateKey)
+	if err != nil {
+		return err
+	}
+
 	publicContent := strings.TrimSpace(publicKey) + "\n"
-	privateContent := strings.TrimSpace(privateKey) + "\n"
+	privateContent := strings.TrimSpace(encryptedPrivateKey) + "\n"
 
 	if err := writeSecureFile(paths.privateKey, privateContent, 0o600); err != nil {
 		return err
@@ -124,6 +133,30 @@ func LoadUserPublicKey(username string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(data)), nil
+}
+
+func LoadUserEncryptedPrivateKey(username string) (string, error) {
+	storeDir := secureStoreDir()
+	paths, err := buildUserKeyPaths(storeDir, username)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := os.ReadFile(paths.privateKey)
+	if err != nil {
+		return "", fmt.Errorf("read private key: %w", err)
+	}
+
+	return strings.TrimSpace(string(data)), nil
+}
+
+func LoadUserPrivateKey(username, password string) (string, error) {
+	encrypted, err := LoadUserEncryptedPrivateKey(username)
+	if err != nil {
+		return "", err
+	}
+
+	return DecryptPrivateKey(password, encrypted)
 }
 
 func secureStoreDir() string {
@@ -185,4 +218,99 @@ func fileExists(path string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+const (
+	privateKeyCipherVersion = "v1"
+	privateKeySaltSize      = 16
+	privateKeyKeyLen        = 32
+	privateKeyArgonTime     = 2
+	privateKeyArgonMemory   = 64 * 1024
+	privateKeyArgonThreads  = 1
+)
+
+func EncryptPrivateKey(password, privateKey string) (string, error) {
+	trimmedPassword := strings.TrimSpace(password)
+	if trimmedPassword == "" {
+		return "", errors.New("password is required to encrypt private key")
+	}
+	trimmedKey := strings.TrimSpace(privateKey)
+	if trimmedKey == "" {
+		return "", errors.New("private key is required for encryption")
+	}
+
+	salt := make([]byte, privateKeySaltSize)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("generate private key salt: %w", err)
+	}
+
+	key := argon2.IDKey([]byte(trimmedPassword), salt, privateKeyArgonTime, privateKeyArgonMemory, privateKeyArgonThreads, privateKeyKeyLen)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("create private key cipher: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("create private key gcm: %w", err)
+	}
+
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("generate private key nonce: %w", err)
+	}
+
+	ciphertext := gcm.Seal(nil, nonce, []byte(trimmedKey), nil)
+
+	return fmt.Sprintf("%s:%s:%s:%s",
+		privateKeyCipherVersion,
+		base64.StdEncoding.EncodeToString(salt),
+		base64.StdEncoding.EncodeToString(nonce),
+		base64.StdEncoding.EncodeToString(ciphertext),
+	), nil
+}
+
+func DecryptPrivateKey(password, encryptedPrivateKey string) (string, error) {
+	trimmedPassword := strings.TrimSpace(password)
+	if trimmedPassword == "" {
+		return "", errors.New("password is required to decrypt private key")
+	}
+	trimmedEncrypted := strings.TrimSpace(encryptedPrivateKey)
+	if trimmedEncrypted == "" {
+		return "", errors.New("encrypted private key is required")
+	}
+
+	parts := strings.Split(trimmedEncrypted, ":")
+	if len(parts) != 4 || parts[0] != privateKeyCipherVersion {
+		return "", errors.New("invalid encrypted private key format")
+	}
+
+	salt, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", errors.New("invalid encrypted private key salt")
+	}
+	nonce, err := base64.StdEncoding.DecodeString(parts[2])
+	if err != nil {
+		return "", errors.New("invalid encrypted private key nonce")
+	}
+	ciphertext, err := base64.StdEncoding.DecodeString(parts[3])
+	if err != nil {
+		return "", errors.New("invalid encrypted private key data")
+	}
+
+	key := argon2.IDKey([]byte(trimmedPassword), salt, privateKeyArgonTime, privateKeyArgonMemory, privateKeyArgonThreads, privateKeyKeyLen)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("create private key cipher: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("create private key gcm: %w", err)
+	}
+
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return "", errors.New("invalid password or corrupted private key")
+	}
+
+	return strings.TrimSpace(string(plaintext)), nil
 }

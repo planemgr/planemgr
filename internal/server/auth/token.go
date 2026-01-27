@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,6 +19,15 @@ const (
 type tokenClaims struct {
 	TokenType string `json:"typ"`
 	jwt.RegisteredClaims
+}
+
+var ErrLoggedOut = errors.New("User is logged out")
+
+var privateKeyStore = struct {
+	mu   sync.RWMutex
+	keys map[string]string
+}{
+	keys: map[string]string{},
 }
 
 func IssueTokens(subject string) (string, string, int64, error) {
@@ -93,6 +103,9 @@ func RequireAccessTokenClaims(r *http.Request) (*tokenClaims, error) {
 	if claims.TokenType != "access" {
 		return nil, errors.New("invalid token type")
 	}
+	if _, ok := PrivateKeyForSubject(claims.Subject); !ok {
+		return nil, ErrLoggedOut
+	}
 
 	return claims, nil
 }
@@ -110,6 +123,9 @@ func RequireAccessTokenFromBasicAuth(r *http.Request, expectedUser string) error
 	if claims.TokenType != "access" {
 		return errors.New("invalid token type")
 	}
+	if _, ok := PrivateKeyForSubject(claims.Subject); !ok {
+		return ErrLoggedOut
+	}
 
 	return nil
 }
@@ -126,6 +142,9 @@ func RequireRefreshToken(r *http.Request) (*tokenClaims, error) {
 	}
 	if claims.TokenType != "refresh" {
 		return nil, errors.New("invalid token type")
+	}
+	if _, ok := PrivateKeyForSubject(claims.Subject); !ok {
+		return nil, ErrLoggedOut
 	}
 
 	return claims, nil
@@ -147,4 +166,22 @@ func RefreshTokenFromRequest(r *http.Request) string {
 	}
 
 	return r.URL.Query().Get("refresh_token")
+}
+
+func StorePrivateKey(subject, privateKey string) {
+	privateKey = strings.TrimSpace(privateKey)
+	privateKeyStore.mu.Lock()
+	defer privateKeyStore.mu.Unlock()
+	if privateKey == "" {
+		delete(privateKeyStore.keys, subject)
+		return
+	}
+	privateKeyStore.keys[subject] = privateKey
+}
+
+func PrivateKeyForSubject(subject string) (string, bool) {
+	privateKeyStore.mu.RLock()
+	defer privateKeyStore.mu.RUnlock()
+	privateKey, ok := privateKeyStore.keys[subject]
+	return privateKey, ok
 }

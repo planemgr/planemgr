@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mtolmacs/planemgr/internal/server/auth"
 	"github.com/mtolmacs/planemgr/internal/server/deploy"
+	"github.com/mtolmacs/planemgr/internal/server/user"
 )
 
 type deployRequest struct {
@@ -45,23 +46,28 @@ func HandleDeploy(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodPost:
-		HandleDeployCreate(w, r, claims.Subject)
+		privateKey, ok := auth.PrivateKeyForSubject(claims.Subject)
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "unauthorized", Message: auth.ErrLoggedOut.Error()})
+			return
+		}
+		HandleDeployCreate(w, r, claims.Subject, privateKey)
 	default:
 		w.Header().Set("Allow", "POST")
-		writeJSON(w, http.StatusMethodNotAllowed, errorResponse{Error: "method_not_allowed"})
+		writeJSON(w, http.StatusMethodNotAllowed, errorResponse{Error: "Method_not_allowed"})
 	}
 }
 
 // HandleDeployCreate handles POST /api/deploy requests.
-func HandleDeployCreate(w http.ResponseWriter, r *http.Request, subject string) {
+func HandleDeployCreate(w http.ResponseWriter, r *http.Request, subject, privateKey string) {
 	if r.Body == nil {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "missing request body"})
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "Missing request body"})
 		return
 	}
 
 	var req deployRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "invalid JSON payload"})
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_request", Message: "Invalid JSON payload"})
 		return
 	}
 
@@ -76,16 +82,30 @@ func HandleDeployCreate(w http.ResponseWriter, r *http.Request, subject string) 
 		return
 	}
 
+	publicKey, err := user.LoadUserPublicKey(subject)
+	if err != nil {
+		status := http.StatusInternalServerError
+		code := "key_load_failed"
+		if errors.Is(err, os.ErrNotExist) {
+			status = http.StatusNotFound
+			code = "ssh_public_key_not_found"
+		}
+		writeJSON(w, status, errorResponse{Error: code, Message: err.Error()})
+		return
+	}
+
 	result, err := deploy.RunDockerDeploy(
 		r.Context(),
 		token,
 		req.Id,
 		req.Ref,
 		subject,
+		publicKey,
+		privateKey,
 	)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, deploy.ErrInvalidRef) || errors.Is(err, deploy.ErrUnsupportedRunner) || errors.Is(err, deploy.ErrInvalidWorkdir) {
+		if errors.Is(err, deploy.ErrInvalidRef) || errors.Is(err, deploy.ErrUnsupportedRunner) || errors.Is(err, deploy.ErrInvalidWorkdir) || errors.Is(err, deploy.ErrMissingSSHKey) {
 			status = http.StatusBadRequest
 		}
 		if errors.Is(err, os.ErrNotExist) {
