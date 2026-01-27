@@ -1,9 +1,0 @@
-services:
-  runner-development:
-    image: planemgr/runner:latest
-    build: .
-    command: ["tail", "-f", "/dev/null"]
-    develop:
-      watch:
-        - action: rebuild
-          path: .

@@ -1,9 +1,12 @@
-package runner
+//go:build !dev
+
+package docker
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"regexp"
 
 	"github.com/moby/moby/api/types/container"
@@ -11,6 +14,8 @@ import (
 )
 
 func TestRunnerImage(tag string) (string, error) {
+	log.Printf(`Verifying runner image "%s" is working`, tag)
+
 	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return "", fmt.Errorf("Create docker client: %w", err)

@@ -43,11 +43,7 @@ tasks:
       - build:web
       - docs:api
     cmds:
-      - go build -tags embedfs -o build/planemgr ./cmd/server
-  dev:runner:
-    desc: Build the susebci runner image
-    cmds:
-      - docker compose -f runner/susebci/docker-compose.development.yml up --watch
+      - go build -tags embedfs -o build/planemgr ./cmd/server  
   dev:backend:
     desc: Start backend dev server
     deps:
@@ -65,4 +61,4 @@ tasks:
     deps:
       - deps
     cmds:
-      - cmd: task -p dev:runner dev:backend
+      - cmd: task -p dev:backend dev:frontend

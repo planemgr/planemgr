@@ -11,9 +11,8 @@ import (
 	_ "golang.org/x/text/unicode/bidi"
 
 	"github.com/joho/godotenv"
+	"github.com/mtolmacs/planemgr/cmd/server/docker"
 	"github.com/mtolmacs/planemgr/internal/server"
-	"github.com/mtolmacs/planemgr/runner/custom"
-	"github.com/mtolmacs/planemgr/runner/susebci"
 )
 
 func main() {
@@ -25,11 +24,19 @@ func main() {
 	}
 
 	// Ensure the runner image is ready.
-	switch os.Getenv("RUNNER_IMAGE") {
-	case "":
-		susebci.EnsureRunnerImage()
+	runnerImage := os.Getenv("RUNNER_IMAGE")
+	if runnerImage == "" {
+		runnerImage = "planemgr/runner:latest"
+	}
+
+	switch os.Getenv("RUNNER_TYPE") {
+	case "", "docker":
+		docker.TestRunnerImage(runnerImage)
 	default:
-		custom.EnsureRunnerImage()
+		log.Fatalf(
+			"Unsupported RUNNER_TYPE: %s. The supported runner types are: docker",
+			os.Getenv("RUNNER_TYPE"),
+		)
 	}
 
 	srv := &http.Server{
