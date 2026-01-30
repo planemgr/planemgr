@@ -1,0 +1,11 @@
+packages:
+  - ./plugins/**
+  - ./web
+
+ignoredBuiltDependencies:
+  - esbuild
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+
+

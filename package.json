@@ -1,0 +1,24 @@
+{
+  "name": "@planemgr/planemgr",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd web && pnpm dev",
+    "build": "cd web && tsc -p web/tsconfig.json && vite build",    
+    "lint": "eslint --config ./eslint.config.mjs \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --config ./prettierrc.json --write \"src/**/*.{ts,tsx,css,md,json}\"",
+    "typecheck": "tsc -p web/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@planemgr/web": "workspace:*",
+    "@planemgr/plugin-core": "workspace:*",
+    "@planemgr/platform-dummy": "workspace:*",
+    "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "@typescript-eslint/parser": "^7.17.0",
+    "eslint": "^9.10.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.35.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "prettier": "^3.3.3"
+  }
+}

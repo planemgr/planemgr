@@ -1,0 +1,9 @@
+{
+  "name": "@planemgr/platform-dummy",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "type": "module",
+  "dependencies": {
+    "@planemgr/plugin-core": "workspace:*"
+  }
+}

@@ -10,10 +10,78 @@
   padding: 16px;
   z-index: 1000;
   pointer-events: auto;
+  min-width: 200px;
 }
 
-.content {
-  color: #666;
+.header {
   font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.node {
+  padding: 12px;
+  border-radius: 6px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
   user-select: none;
+
+  &:active {
+    cursor: grabbing;
+    opacity: 0.7;
+  }
+
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  &.platform {
+    background: #7c3aed;
+    color: white;
+
+    &:hover {
+      border-color: #7c3aed;
+    }
+  }
+
+  &.compute {
+    background: #dc2626;
+    color: white;
+
+    &:hover {
+      border-color: #dc2626;
+    }
+  }
+
+  &.service {
+    background: #0891b2;
+    color: white;
+
+    &:hover {
+      border-color: #0891b2;
+    }
+  }
+}
+
+.nodeLabel {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.nodeDescription {
+  font-size: 11px;
+  opacity: 0.9;
+  font-style: italic;
 }
