@@ -1,8 +1,12 @@
+import Canvas from './components/Canvas';
+import Palette from './components/Palette';
+
 const App = () => {
   return (
-    <div>
-      <h1>Welcome to PlaneMgr</h1>
-    </div>
+    <>
+      <Canvas />
+      <Palette />
+    </>
   );
 };
 

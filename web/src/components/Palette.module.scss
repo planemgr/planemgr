@@ -1,0 +1,19 @@
+.palette {
+  position: fixed;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+.content {
+  color: #666;
+  font-size: 14px;
+  user-select: none;
+}
