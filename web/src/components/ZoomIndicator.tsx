@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useReactFlow } from 'reactflow';
-import styles from './ZoomIndicator.module.scss';
+import { useState, useEffect } from "react";
+import { useReactFlow } from "reactflow";
+import styles from "./ZoomIndicator.module.scss";
 
 const ZoomIndicator = () => {
   const { getZoom, setViewport, getViewport } = useReactFlow();

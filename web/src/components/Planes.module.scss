@@ -1,0 +1,32 @@
+.planes {
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 40px);
+  width: 100vw;
+  overflow: hidden;
+}
+
+.canvas {
+  height: calc(100vh - 40px);
+  width: 100vw;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  align-items: flex-start;
+  height: 40px;
+}
+
+.tab {
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  user-select: none;
+}

@@ -1,10 +1,10 @@
-import Canvas from './components/Canvas';
-import Palette from './components/Palette';
+import Palette from "./components/Palette";
+import Planes from "./components/Planes";
 
 const App = () => {
   return (
     <>
-      <Canvas />
+      <Planes />
       <Palette />
     </>
   );

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc -p web/tsconfig.json && vite build",    
+    "build": "tsc -p web/tsconfig.json && vite build",
     "lint": "eslint --config ../eslint.config.mjs \"src/**/*.{ts,tsx}\"",
     "format": "prettier --config ../prettierrc.json --write \"src/**/*.{ts,tsx,css,md,json}\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -14,7 +14,8 @@
     "@planemgr/plugin-core": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.0.9",
